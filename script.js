@@ -871,24 +871,50 @@ if (btnReadDownloadInfo) {
                 logRaw(`<span class="color-blue">Initializing Handshake...</span>`);
                 
                 await transferOdinPacket(device, "ODIN"); // بدء الجلسة
+                await new Promise(r => setTimeout(r, 200)); // وقت استقرار بسيط
 
-                // محاولة جلب البيانات بمفاتيح بديلة تتوافق مع الأجهزة الجديدة
-                // Samsung devices often use these keys:
-                const model = await transferOdinPacket(device, "GETVAR:model_name") || await transferOdinPacket(device, "GETVAR:product");
-                const csc = await transferOdinPacket(device, "GETVAR:sales_code") || await transferOdinPacket(device, "GETVAR:sales-code");
-                const ap = await transferOdinPacket(device, "GETVAR:version-apsv") || await transferOdinPacket(device, "GETVAR:boot-version");
-                const did = await transferOdinPacket(device, "GETVAR:did") || await transferOdinPacket(device, "GETVAR:did_id");
-                const storage = await transferOdinPacket(device, "GETVAR:storage-size");
-                const uniqueNum = await transferOdinPacket(device, "GETVAR:unique_number") || await transferOdinPacket(device, "GETVAR:unique-id");
+                // 1. قراءة الموديل مع فلترة كلمة LOKE
+                let model = await transferOdinPacket(device, "GETVAR:model_name") || 
+                            await transferOdinPacket(device, "GETVAR:product_name") || 
+                            await transferOdinPacket(device, "GETVAR:product");
+                
+                if (!model || model.toUpperCase() === "LOKE") {
+                    model = device.productName ? device.productName.replace(/SAMSUNG_|Samsung /gi, "") : "Samsung Device";
+                }
+
+                // 2. قراءة CSC (تستخدم مفاتيح مختلفة في الحمايات الجديدة)
+                const csc = await transferOdinPacket(device, "GETVAR:sales_code") || 
+                            await transferOdinPacket(device, "GETVAR:sales-code") || 
+                            await transferOdinPacket(device, "GETVAR:omc_sales_code");
+
+                // 3. قراءة AP (إصدار السوفت وير)
+                const ap = await transferOdinPacket(device, "GETVAR:version-apsv") || 
+                           await transferOdinPacket(device, "GETVAR:version-bootloader") || 
+                           await transferOdinPacket(device, "GETVAR:boot-version");
+
+                // 4. استخراج الـ Bit (Binary) - عادة ما يكون الخامس من اليمين في إصدار الـ AP
+                let bit = await transferOdinPacket(device, "GETVAR:sw_rev") || "N/A";
+                if (bit === "N/A" && ap && ap.length > 5) {
+                    bit = ap.charAt(ap.length - 5); // استخراج احترافي من نص الـ AP
+                }
+
+                const did = await transferOdinPacket(device, "GETVAR:did") || 
+                            await transferOdinPacket(device, "GETVAR:did_id");
+                
+                const storage = await transferOdinPacket(device, "GETVAR:storage-size") || 
+                                await transferOdinPacket(device, "GETVAR:total_capacity");
+                
+                const uniqueNum = await transferOdinPacket(device, "GETVAR:unique_number") || 
+                                  await transferOdinPacket(device, "GETVAR:unique-id");
                 
                 logRaw(`<br><span class="color-purple">—————————————————————————————————————</span>`);
-                logInfo('Model', (model === "LOKE" || !model) ? device.productName : model);
+                logInfo('Model', model);
                 logInfo('CSC', csc || "N/A");
                 logInfo('AP version', ap || "N/A");
-                logInfo('Bit', ap ? ap.charAt(ap.length - 5) : "N/A");
+                logInfo('Bit (Binary)', bit);
                 logInfo('FWVER', "2"); // قيمة افتراضية للبروتوكول
                 logInfo('Unique number', uniqueNum || "N/A");
-                logInfo('Storage', storage ? (parseInt(storage)/1024/1024/1024).toFixed(0) + " GB" : "64");
+                logInfo('Storage', storage ? (parseInt(storage)/1024/1024/1024).toFixed(0) + " GB" : "N/A");
                 logInfo('Vendor', "SAMSUNG");
                 logInfo('Disk', "DP6DBB");
                 logInfo('DID', did || "N/A");
