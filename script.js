@@ -143,13 +143,23 @@ btnConnect.addEventListener('click', async () => {
         const Manager = AdbDaemonWebUsbDeviceManager.BROWSER;
         if (!Manager) throw new Error("AdbDaemonWebUsbDeviceManager is not initialized.");
 
-        // استخدام الدالة الجديدة لفتح الجهاز
-        const device = await getOrRequestDevice([]); 
+        // 2. استخدام مدير ADB مباشرة بدلاً من الدالة العامة لضمان الحصول على وظيفة .connect()
+        let device = null;
+        const pairedDevices = await Manager.getDevices();
+        
+        if (pairedDevices.length > 0) {
+            device = pairedDevices[0]; // استخدام الجهاز المقترن مسبقاً
+            logRaw(`<span class="color-blue">Reconnecting to saved device...</span>`);
+        } else {
+            statusText.innerText = "Status: Select Device...";
+            device = await Manager.requestDevice(); // طلب إذن جديد
+        }
         
         statusText.innerText = "Status: Connecting...";
         logRaw(`<span class="color-blue">Authenticating with device...</span>`);
         logRaw(`<span class="color-purple">Note: If prompted on phone, check 'Always allow' and click OK.</span>`);
 
+        // فتح القناة (هنا يتم تحويل USB Stream إلى ADB Stream)
         const connection = await device.connect();
         const credentialStore = new AdbWebCredentialStore();
         
