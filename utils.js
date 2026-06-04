@@ -45,12 +45,8 @@ export async function getOrRequestDevice(filters) {
 
     // 2. ابحث في الأجهزة المقترنة مسبقاً
     const pairedDevices = await navigator.usb.getDevices();
-    let device = pairedDevices.find(d => 
-        filters.some(f => {
-            if (f.vendorId && f.vendorId !== d.vendorId) return false;
-            if (f.productId && f.productId !== d.productId) return false;
-            return true;
-        })
+    let device = pairedDevices.find(d =>
+        filters.some(f => (f.vendorId === d.vendorId && (!f.productId || f.productId === d.productId)))
     );
 
     // 3. إذا لم يوجد، اطلب من المستخدم اختيار جهاز
@@ -65,11 +61,7 @@ export async function getOrRequestDevice(filters) {
 
 export async function findInterfaceAndEndpoints(device, type = 'bulk') {
     try {
-        if (!device.opened) await device.open();
-        // في OTG أندرويد، لا تقم بإعادة اختيار الإعدادات إذا كانت موجودة بالفعل لمنع الفصل
-        if (!device.configuration || device.configuration.configurationValue !== 1) {
-            await device.selectConfiguration(1).catch(() => {});
-        }
+        if (!device.configuration) await device.selectConfiguration(1);
     } catch (e) { console.warn("Config error", e); }
 
     for (const iface of device.configuration.interfaces) {
@@ -79,11 +71,9 @@ export async function findInterfaceAndEndpoints(device, type = 'bulk') {
             
             if (outEp && inEp) {
                 try {
+                    // خطوة حاسمة لـ OTG: المطالبة بالواجهة وتحديد الوضع البديل (كما في الملف القديم)
                     await device.claimInterface(iface.interfaceNumber);
-                    // لا تطلب الوضع البديل إذا كان هو المفعل بالفعل
-                    if (alt.alternateSetting !== 0) {
-                        await device.selectAlternateInterface(iface.interfaceNumber, alt.alternateSetting);
-                    }
+                    await device.selectAlternateInterface(iface.interfaceNumber, alt.alternateSetting);
                     
                     return {
                         interfaceNumber: iface.interfaceNumber,
