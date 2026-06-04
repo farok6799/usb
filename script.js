@@ -2,6 +2,7 @@ import { logRaw, terminal, statusText, setButtonsState, setActiveUsbDevice } fro
 import * as adb from './adb-handler.js';
 import * as samsung from './samsung-handler.js';
 import * as fastboot from './fastboot-handler.js';
+import * as apple from './apple-handler.js';
 
 document.addEventListener('DOMContentLoaded', () => {
     if (typeof lucide !== 'undefined') lucide.createIcons();
@@ -42,6 +43,10 @@ bindAction('btnMTP', samsung.handleMTP);
 bindAction('btnReadDownloadInfo', samsung.readDownloadInfo);
 bindAction('btnDownloadReboot', samsung.odinReboot);
 
+// Apple Actions
+bindAction('btnApple', apple.readAppleInfo);
+bindAction('btnExitRecovery', apple.exitAppleRecovery);
+
 // Fastboot & Honor Actions
 bindAction('btnFastbootInfo', fastboot.fastbootInfo);
 bindAction('btnFastbootReboot', fastboot.fastbootReboot);
@@ -67,7 +72,7 @@ document.getElementById('apkInput').onchange = (e) => {
 };
 
 // Menu Toggles
-['btnADBMenu', 'btnRebootMenu', 'btnFastbootMenu', 'btnDownloadMenu'].forEach(id => {
+['btnADBMenu', 'btnRebootMenu', 'btnFastbootMenu', 'btnDownloadMenu', 'btnAppleMenu'].forEach(id => {
     document.getElementById(id).onclick = (e) => {
         const dropId = id.replace('btn', '').replace('Menu', '').toLowerCase() + "Dropdown";
         document.getElementById(dropId).classList.toggle("show");

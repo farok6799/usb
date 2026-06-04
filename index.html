@@ -59,6 +59,16 @@
             <button id="btnMTP" class="btn-secondary"><i data-lucide="radio"></i> Read Info (MTP/AT)</button>
 
             <div class="dropdown">
+                <button id="btnAppleMenu" class="btn-secondary">
+                    <i data-lucide="apple"></i> Apple Ops <i data-lucide="chevron-down"></i>
+                </button>
+                <div id="appleDropdown" class="dropdown-content">
+                    <a href="#" id="btnApple"><i data-lucide="info"></i> Read Info (Normal)</a>
+                    <a href="#" id="btnExitRecovery"><i data-lucide="log-out"></i> Exit Recovery Mode</a>
+                </div>
+            </div>
+
+            <div class="dropdown">
                 <button id="btnDownloadMenu" class="btn-secondary">
                     <i data-lucide="download"></i> Download Ops <i data-lucide="chevron-down"></i>
                 </button>
@@ -83,9 +93,12 @@
         </div>
         
         <div id="terminal" class="console-window">
-            <div class="terminal-header">SYSTEM TERMINAL ACTIVE</div>
-            <div class="color-purple">Welcome to Mostafa Unlocker Engine v1.0.3</div>
-            <div class="color-blue">>_ Waiting for device connection...</div><br>
+            <div class="terminal-overlay"></div>
+            <div class="terminal-content">
+                <div class="terminal-header">SYSTEM TERMINAL ACTIVE</div>
+                <div class="color-purple">Welcome to Mostafa Unlocker Engine v1.0.3</div>
+                <div class="color-blue">>_ Waiting for device connection...</div><br>
+            </div>
         </div>
 
         <div class="status-bar">
