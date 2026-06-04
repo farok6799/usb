@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mostafa Unlocker Web Tool</title>
+    <link rel="stylesheet" href="style.css">
+    <!-- مكتبة الأيقونات Lucide -->
+    <script src="https://cdn.jsdelivr.net/npm/lucide@0.344.0/dist/umd/lucide.min.js"></script>
+</head>
+<body>
+    <div class="app-window">
+        <div class="title-bar">
+            <div class="brand">
+                <i data-lucide="zap" class="icon-zap"></i>
+                <span>Mostafa Unlocker <small>v1.0.2</small></span>
+            </div>
+            <div class="window-controls">
+                <span><i data-lucide="minus"></i></span>
+                <span><i data-lucide="square"></i></span>
+                <span class="close-btn"><i data-lucide="x"></i></span>
+            </div>
+        </div>
+
+        <div class="menu-bar">
+            <span class="menu-item">File</span>
+            <span class="menu-item">Operations</span>
+            <span class="menu-item">Settings</span>
+            <span class="menu-item highlight">Premium Support</span>
+        </div>
+
+        <div class="toolbar">
+            <div class="dropdown">
+                <button id="btnADBMenu" class="btn-primary">
+                    <i data-lucide="settings-2"></i> ADB Operations <i data-lucide="chevron-down"></i>
+                </button>
+                <div id="adbDropdown" class="dropdown-content">
+                    <a href="#" id="btnConnect"><i data-lucide="info"></i> Read Info (ADB)</a>
+                    <a href="#" id="btnAppManager" class="disabled-link"><i data-lucide="layout-grid"></i> App Manager</a>
+                    <a href="#" id="btnKnox" class="disabled-link"><i data-lucide="shield-off"></i> Disable Knox</a>
+                    <a href="#" id="btnFRP" class="disabled-link"><i data-lucide="unlock"></i> Reset FRP</a>
+                </div>
+            </div>
+
+            <div class="dropdown">
+                <button id="btnFastbootMenu" class="btn-secondary">
+                    <i data-lucide="zap"></i> Fastboot Ops <i data-lucide="chevron-down"></i>
+                </button>
+                <div id="fastbootDropdown" class="dropdown-content">
+                    <a href="#" id="btnFastbootInfo"><i data-lucide="info"></i> Read Info (Fastboot)</a>
+                    <a href="#" id="btnFastbootReboot"><i data-lucide="refresh-cw"></i> Reboot System</a>
+                    <div class="dropdown-divider"></div>
+                    <div class="dropdown-header">HONOR / HUAWEI Special</div>
+                    <a href="#" id="btnHonorInfo"><i data-lucide="cpu"></i> Read HONOR Detailed Info</a>
+                    <a href="#" id="btnHonorFRP"><i data-lucide="unlock"></i> HONOR Reset FRP</a>
+                </div>
+            </div>
+
+            <button id="btnMTP" class="btn-secondary"><i data-lucide="radio"></i> Read Info (MTP/AT)</button>
+
+            <div class="dropdown">
+                <button id="btnDownloadMenu" class="btn-secondary">
+                    <i data-lucide="download"></i> Download Ops <i data-lucide="chevron-down"></i>
+                </button>
+                <div id="downloadDropdown" class="dropdown-content">
+                    <a href="#" id="btnReadDownloadInfo"><i data-lucide="info"></i> Read Info (Download)</a>
+                    <a href="#" id="btnDownloadReboot"><i data-lucide="refresh-cw"></i> Reboot to System</a>
+                </div>
+            </div>
+
+            <div class="dropdown">
+                <button id="btnRebootMenu" class="btn-outline" disabled>
+                    <i data-lucide="refresh-cw"></i> Reboot Options <i data-lucide="chevron-down"></i>
+                </button>
+                <div id="rebootDropdown" class="dropdown-content">
+                    <a href="#" id="btnReboot"><i data-lucide="power"></i> Standard Reboot</a>
+                    <a href="#" id="btnDownload"><i data-lucide="download-cloud"></i> Download Mode</a>
+                    <a href="#" id="btnRecovery"><i data-lucide="cpu"></i> Recovery Mode</a>
+                </div>
+            </div>
+            <button id="btnClear" class="btn-outline"><i data-lucide="trash-2"></i> Clear Log</button>
+        </div>
+        
+        <div id="terminal" class="console-window">
+            <div class="terminal-header">SYSTEM TERMINAL ACTIVE</div>
+            <div class="color-purple">Welcome to Mostafa Unlocker Engine v1.0.2</div>
+            <div class="color-blue">>_ Waiting for device connection...</div><br>
+        </div>
+
+        <div class="status-bar">
+            <div class="status-indicator">
+                <span class="dot pulse"></span>
+                <span id="statusText">Status: Ready</span>
+            </div>
+            <div class="copyright">© 2024 MOSTAFA UNLOCKER <span class="divider">|</span> PROFESSIONAL EDITION</div>
+        </div>
+    </div>
+
+    <!-- App Manager Modal -->
+    <div id="appModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span><i data-lucide="box"></i> Device App Manager</span>
+                <span class="close-modal"><i data-lucide="x"></i></span>
+            </div>
+            <div class="modal-body">
+                <div class="app-controls">
+                    <div class="search-box">
+                        <i data-lucide="search"></i>
+                        <input type="text" id="appSearch" placeholder="Filter packages...">
+                    </div>
+                    <select id="appFilter">
+                        <option value="all">All Apps</option>
+                        <option value="enabled">Enabled</option>
+                        <option value="disabled">Disabled</option>
+                        <option value="system">System Apps</option>
+                    </select>
+                    <button id="btnInstallApk" class="btn-primary btn-sm"><i data-lucide="plus-circle"></i> Install APK</button>
+                    <input type="file" id="apkInput" accept=".apk" style="display: none;">
+                </div>
+                <!-- شريط تقدم التثبيت -->
+                <div id="installProgressContainer" style="display: none; margin-bottom: 15px;">
+                    <div style="display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 5px;">
+                        <span>Installing APK...</span>
+                        <span id="installPercent">0%</span>
+                    </div>
+                    <div class="progress-bg"><div id="installProgressBar" class="progress-fill"></div></div>
+                </div>
+                <div class="app-list-container">
+                    <table id="appTable">
+                        <thead><tr><th>Package Name</th><th>Status</th><th>Type</th><th>Actions</th></tr></thead>
+                        <tbody id="appTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="script.js"></script>
+</body>
+</html>
