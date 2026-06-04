@@ -1,4 +1,4 @@
-import { logRaw, logInfo, statusText, getOrRequestDevice, findInterfaceAndEndpoints } from './utils.js';
+import { logRaw, logInfo, statusText, getOrRequestDevice, findInterfaceAndEndpoints, activeUsbDevice, setActiveUsbDevice } from './utils.js';
 
 async function runFastbootCommand(device, command) {
     const encoder = new TextEncoder();
@@ -41,6 +41,12 @@ export async function fastbootInfo() {
     try {
         if (!navigator.usb) throw new Error("WebUSB not supported.");
         
+        // حل سحري للـ OTG: إغلاق أي جلسة قديمة وتصفيرها قبل البدء (محاكاة للـ Refresh)
+        if (activeUsbDevice) {
+            await activeUsbDevice.close().catch(() => {});
+            setActiveUsbDevice(null);
+        }
+
         statusText.innerText = "Status: Searching for Fastboot Device...";
         const device = await getOrRequestDevice([{ classCode: 0xff, subclassCode: 0x42, protocolCode: 0x03 }]);
 
@@ -71,11 +77,16 @@ export async function fastbootInfo() {
 
 export async function fastbootReboot() {
     try {
+        // حل سحري للـ OTG: إغلاق أي جلسة قديمة وتصفيرها قبل البدء
+        if (activeUsbDevice) {
+            await activeUsbDevice.close().catch(() => {});
+            setActiveUsbDevice(null);
+        }
+
         statusText.innerText = "Status: Connecting to Fastboot...";
         const device = await getOrRequestDevice([{ classCode: 0xff, subclassCode: 0x42, protocolCode: 0x03 }]);
 
         logRaw(`<br><span class="color-blue">Sending 'fastboot reboot'...</span>`);
-        
         await runFastbootCommand(device, 'reboot');
         
         logRaw(`<span class="color-green">Device is rebooting to system.</span>`);

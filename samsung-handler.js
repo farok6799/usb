@@ -1,4 +1,4 @@
-import { logRaw, logInfo, statusText, getOrRequestDevice, findInterfaceAndEndpoints } from './utils.js';
+import { logRaw, logInfo, statusText, getOrRequestDevice, findInterfaceAndEndpoints, activeUsbDevice, setActiveUsbDevice } from './utils.js';
 
 export async function handleMTP() {
     try {
@@ -130,6 +130,12 @@ export async function readDownloadInfo() {
     try {
         if (!navigator.usb) {
             throw new Error("WebUSB API is not supported in this browser.");
+        }
+
+        // حل سحري للـ OTG: إغلاق أي جلسة قديمة وتصفيرها قبل البدء
+        if (activeUsbDevice) {
+            await activeUsbDevice.close().catch(() => {});
+            setActiveUsbDevice(null);
         }
 
         logRaw(`<br><span class="color-purple">--- Searching for Samsung Download Mode Device ---</span>`);

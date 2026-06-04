@@ -49,10 +49,8 @@ export async function getOrRequestDevice(filters) {
         filters.some(f => (f.vendorId === d.vendorId && (!f.productId || f.productId === d.productId)))
     );
 
-    // 3. إذا لم يوجد، اطلب من المستخدم اختيار جهاز
-    if (!device) {
-        device = await navigator.usb.requestDevice({ filters });
-    }
+    // 3. في أندرويد OTG، يفضل طلب الجهاز دائماً إذا لم تكن هناك جلسة مفتوحة لضمان الصلاحيات
+    if (!device) device = await navigator.usb.requestDevice({ filters });
     
     await device.open();
     activeUsbDevice = device;
