@@ -31,6 +31,7 @@ const installProgressBar = document.getElementById('installProgressBar');
 const installPercent = document.getElementById('installPercent');
 
 let currentAdb = null;
+let activeUsbDevice = null; // متغير عالمي للحفاظ على جلسة USB نشطة
 let allPackages = [];
 
 // تهيئة الأيقونات
@@ -42,14 +43,13 @@ console.log("Mostafa Unlocker Web Tool v1.0.2 Loaded Successfully.");
 
 // مستمع لحدث فصل الجهاز من الكابل
 navigator.usb.addEventListener('disconnect', (event) => {
-    if (currentAdb) {
-        logRaw(`<br><span class="color-red">Device disconnected: ${event.device.serialNumber}</span>`);
-        statusText.innerText = "Status: Disconnected";
-        btnRebootMenu.disabled = true;
-        appModal.style.display = "none";
-        setButtonsState(false);
-        currentAdb = null;
-    }
+    logRaw(`<br><span class="color-red">Device disconnected: ${event.device.serialNumber || 'USB Device'}</span>`);
+    statusText.innerText = "Status: Disconnected";
+    btnRebootMenu.disabled = true;
+    appModal.style.display = "none";
+    setButtonsState(false);
+    currentAdb = null;
+    activeUsbDevice = null;
 });
 
 function logRaw(html) {
@@ -100,39 +100,66 @@ async function setButtonsState(enabled) {
     });
 }
 
+// دالة ذكية لجلب الجهاز دون إظهار قائمة الـ Picker كل مرة (مهمة جداً للـ OTG)
+async function getOrRequestDevice(filters) {
+    // 1. ابحث عن جهاز متصل ومفتوح بالفعل
+    if (activeUsbDevice && activeUsbDevice.opened) {
+        return activeUsbDevice;
+    }
+
+    // 2. ابحث في الأجهزة المقترنة مسبقاً
+    const pairedDevices = await navigator.usb.getDevices();
+    if (pairedDevices.length > 0) {
+        // فلترة الأجهزة حسب النوع المطلوب (ADB, Fastboot, or Samsung)
+        const found = pairedDevices.find(d => 
+            filters.some(f => (f.vendorId === d.vendorId && (!f.productId || f.productId === d.productId)))
+        );
+        if (found) {
+            await found.open();
+            activeUsbDevice = found;
+            return found;
+        }
+    }
+
+    // 3. إذا لم يوجد، اطلب من المستخدم اختيار جهاز
+    const device = await navigator.usb.requestDevice({ filters });
+    await device.open();
+    activeUsbDevice = device;
+    return device;
+}
+
 btnConnect.addEventListener('click', async () => {
     try {
-        if (!navigator.usb) {
-            throw new Error("Your browser does not support WebUSB. Please use Chrome or Edge.");
+        // 1. منع تكرار الاتصال إذا كان هناك جهاز متصل بالفعل
+        if (currentAdb) {
+            logRaw("<span class='color-blue'>[Info] Device is already connected.</span>");
+            return;
         }
 
-        statusText.innerText = "Status: Waiting for USB Device...";
-        
-        // فحص الأجهزة المتاحة فعلياً قبل طلب جهاز جديد
-        const pairedDevices = await navigator.usb.getDevices();
-        if (pairedDevices.length > 0) {
-            logRaw(`<span class="color-blue">Found ${pairedDevices.length} already paired device(s).</span>`);
+        if (!navigator.usb) {
+            throw new Error("Your browser does not support WebUSB. Please use Chrome or Edge.");
         }
 
         const Manager = AdbDaemonWebUsbDeviceManager.BROWSER;
         if (!Manager) throw new Error("AdbDaemonWebUsbDeviceManager is not initialized.");
 
-        // محاولة طلب الجهاز
-        const device = await Manager.requestDevice().catch(e => {
-            console.error(e);
-            return null;
-        });
+        // استخدام الدالة الجديدة لفتح الجهاز
+        const device = await getOrRequestDevice([]); 
+        
+        statusText.innerText = "Status: Connecting...";
+        logRaw(`<span class="color-blue">Authenticating with device...</span>`);
+        logRaw(`<span class="color-purple">Note: If prompted on phone, check 'Always allow' and click OK.</span>`);
 
-        if (!device) {
-            statusText.innerText = "Status: No device selected";
-            logRaw("<span class='color-red'>No device was selected or found. Tip: Check USB Debugging and kill other ADB processes.</span>");
-            return;
-        }
-
-        statusText.innerText = "Status: Authenticating...";
         const connection = await device.connect();
         const credentialStore = new AdbWebCredentialStore();
-        const transport = await AdbDaemonTransport.authenticate({ serial: device.serial, connection, credentialStore });
+        
+        // هنا الكود سينتظر تلقائياً فقط إذا كان الجهاز غير موثق
+        const transport = await AdbDaemonTransport.authenticate({ 
+            serial: device.serial, 
+            connection, 
+            credentialStore 
+        });
+        
         currentAdb = new Adb(transport);
 
         statusText.innerText = "Status: Reading Data...";
@@ -835,10 +862,8 @@ if (btnReadDownloadInfo) {
                 { vendorId: 0x04e8, productId: 0x685e }  // Alternative Download Mode
             ];
 
-            const device = await navigator.usb.requestDevice({ filters });
-
-            statusText.innerText = "Status: Opening USB Device...";
-            await device.open();
+            // استخدام الدالة الموحدة
+            const device = await getOrRequestDevice(filters);
             
             let deepInfoAvailable = false;
             try {
@@ -898,7 +923,7 @@ if (btnReadDownloadInfo) {
                 logRaw(`<span class="color-blue">1. Open Zadig 2. Select this device 3. Click 'Replace Driver' with WinUSB.</span>`);
             }
 
-            await device.close();
+            // لا نغلق الجهاز هنا للحفاظ على اتصال OTG نشط
             statusText.innerText = "Status: Ready";
 
         } catch (err) {
@@ -916,9 +941,7 @@ if (btnDownloadReboot) {
                 { vendorId: 0x04e8, productId: 0x685d },
                 { vendorId: 0x04e8, productId: 0x685e }
             ];
-            const device = await navigator.usb.requestDevice({ filters });
-            await device.open();
-            if (device.configuration === null) await device.selectConfiguration(1);
+            const device = await getOrRequestDevice(filters);
             
             try {
                 await device.claimInterface(0);
@@ -935,7 +958,6 @@ if (btnDownloadReboot) {
             
             logRaw(`<span class="color-green">[Success] Device is rebooting to System.</span>`);
             await device.releaseInterface(0);
-            await device.close();
             statusText.innerText = "Status: Ready";
         } catch (err) {
             logRaw(`<br><span class="color-red">Download Reboot FAIL: ${err.message}</span>`);
@@ -1021,12 +1043,8 @@ btnFastbootInfo.addEventListener('click', async () => {
         if (!navigator.usb) throw new Error("WebUSB not supported.");
         
         statusText.innerText = "Status: Searching for Fastboot Device...";
-        const device = await navigator.usb.requestDevice({
-            filters: [{ classCode: 0xff, subclassCode: 0x42, protocolCode: 0x03 }]
-        });
-
-        await device.open();
-        if (device.configuration === null) await device.selectConfiguration(1);
+        const filters = [{ classCode: 0xff, subclassCode: 0x42, protocolCode: 0x03 }];
+        const device = await getOrRequestDevice(filters);
 
         logRaw(`<br><span class="color-purple">--- Fastboot Device Connected ---</span>`);
         logRaw(`<span class="color-blue">Reading variables (getvar:all)...</span>`);
@@ -1045,7 +1063,6 @@ btnFastbootInfo.addEventListener('click', async () => {
         logRaw(`<span class="color-green">Fastboot operation completed.</span>`);
         
         await device.releaseInterface(0);
-        await device.close();
         statusText.innerText = "Status: Ready";
 
     } catch (err) {
@@ -1057,19 +1074,14 @@ btnFastbootInfo.addEventListener('click', async () => {
 btnFastbootReboot.addEventListener('click', async () => {
     try {
         statusText.innerText = "Status: Connecting to Fastboot...";
-        const device = await navigator.usb.requestDevice({
-            filters: [{ classCode: 0xff, subclassCode: 0x42, protocolCode: 0x03 }]
-        });
-
-        await device.open();
-        if (device.configuration === null) await device.selectConfiguration(1);
+        const filters = [{ classCode: 0xff, subclassCode: 0x42, protocolCode: 0x03 }];
+        const device = await getOrRequestDevice(filters);
 
         logRaw(`<br><span class="color-blue">Sending 'fastboot reboot'...</span>`);
         await runFastbootCommand(device, 'reboot');
         
         logRaw(`<span class="color-green">Device is rebooting to system.</span>`);
         await device.releaseInterface(0);
-        await device.close();
         statusText.innerText = "Status: Ready";
     } catch (err) {
         logRaw(`<br><span class="color-red">Fastboot Error: ${err.message}</span>`);
