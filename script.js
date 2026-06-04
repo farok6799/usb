@@ -867,15 +867,6 @@ if (btnReadDownloadInfo) {
             
             let deepInfoAvailable = false;
             try {
-                // محاولة الحصول على الوصول الكامل لإرسال أوامر Odin
-                if (device.configuration === null) await device.selectConfiguration(1);
-                await device.claimInterface(0);
-                deepInfoAvailable = true;
-            } catch (e) {
-                logRaw(`<span class="color-blue">[System] Windows Driver detected. Limited info mode.</span>`);
-            }
-
-            if (deepInfoAvailable) {
                 logRaw(`<span class="color-green">[Success] Full Protocol Access Granted.</span>`);
                 logRaw(`<span class="color-blue">Initializing Handshake...</span>`);
                 
@@ -903,9 +894,16 @@ if (btnReadDownloadInfo) {
                 logInfo('TMU_TEMP', "0");
                 logRaw(`<span class="color-purple">—————————————————————————————————————</span>`);
                 
-                await device.releaseInterface(0);
-            } else {
-                // المعلومات الأساسية في حال فشل الـ Claim (بدون Zadig)
+                deepInfoAvailable = true;
+            } catch (e) {
+                if (e.message.includes("endpoints not found") || e.message.includes("claimInterface")) {
+                    logRaw(`<span class="color-blue">[System] Limited info mode (Driver/Interface busy).</span>`);
+                } else { throw e; }
+            }
+
+            if (!deepInfoAvailable) {
+                // المعلومات الأساسية في حال فشل الـ Claim (بدون Zadig أو قيود OTG)
+
                 let modelName = device.productName || "SAMSUNG USB";
                 if (modelName.toUpperCase().includes("SAMSUNG") && modelName.length > 7) {
                     modelName = modelName.replace(/SAMSUNG_|Samsung /gi, "");
@@ -943,26 +941,40 @@ if (btnDownloadReboot) {
             ];
             const device = await getOrRequestDevice(filters);
             
-            try {
-                await device.claimInterface(0);
-            } catch (claimErr) {
-                logRaw(`<br><span class="color-red"><b>ERROR: ACTION BLOCKED BY WINDOWS</b></span>`);
-                logRaw(`<span class="color-blue">To send 'REBOOT' command, Windows requires WinUSB driver.</span>`);
-                logRaw(`<span class="color-blue">Please use Zadig to replace the driver for Interface 0.</span>`);
-                throw new Error("Unable to claim interface. Driver is busy.");
-            }
-
             logRaw(`<br><span class="color-blue">Sending 'REBOOT' command to Samsung device...</span>`);
             // إرسال أمر إعادة التشغيل عبر بروتوكول Odin
             await transferOdinPacket(device, "REBOOT");
-            
             logRaw(`<span class="color-green">[Success] Device is rebooting to System.</span>`);
-            await device.releaseInterface(0);
             statusText.innerText = "Status: Ready";
         } catch (err) {
             logRaw(`<br><span class="color-red">Download Reboot FAIL: ${err.message}</span>`);
         }
     });
+}
+
+// وظيفة مساعدة ذكية لإيجاد الواجهة والنقاط الطرفية (Endpoints)
+async function findInterfaceAndEndpoints(device, type = 'bulk') {
+    if (!device.configuration) await device.selectConfiguration(1);
+
+    for (const iface of device.configuration.interfaces) {
+        for (const alt of iface.alternates) {
+            const outEp = alt.endpoints.find(e => e.direction === 'out' && e.type === type);
+            const inEp = alt.endpoints.find(e => e.direction === 'in' && e.type === type);
+            
+            if (outEp && inEp) {
+                // محاولة تفعيل الواجهة
+                if (!iface.claimed) {
+                    await device.claimInterface(iface.interfaceNumber);
+                }
+                return {
+                    interfaceNumber: iface.interfaceNumber,
+                    endpointOut: outEp.endpointNumber,
+                    endpointIn: inEp.endpointNumber
+                };
+            }
+        }
+    }
+    return null;
 }
 
 // --- Fastboot Logic (Native WebUSB Implementation) ---
@@ -971,20 +983,10 @@ async function runFastbootCommand(device, command) {
     const encoder = new TextEncoder();
     const decoder = new TextDecoder();
     
-    // العثور على الواجهة والـ Endpoints الخاصة بـ Fastboot
-    // Fastboot عادة يستخدم واجهة بـ Class 0xFF, Subclass 0x42, Protocol 0x03
-    let interfaceNum = 0;
-    let endpointIn = 0;
-    let endpointOut = 0;
+    const setup = await findInterfaceAndEndpoints(device, 'bulk');
+    if (!setup) throw new Error("Fastboot endpoints not found.");
 
-    const iface = device.configuration.interfaces[0];
-    interfaceNum = iface.interfaceNumber;
-    const endpoints = iface.alternates[0].endpoints;
-    
-    endpointIn = endpoints.find(e => e.direction === 'in').endpointNumber;
-    endpointOut = endpoints.find(e => e.direction === 'out').endpointNumber;
-
-    await device.claimInterface(interfaceNum);
+    const { endpointOut, endpointIn } = setup;
 
     // إرسال الأمر
     await device.transferOut(endpointOut, encoder.encode(command));
@@ -1014,29 +1016,13 @@ async function runFastbootCommand(device, command) {
 async function transferOdinPacket(device, commandText) {
     const encoder = new TextEncoder();
     const decoder = new TextDecoder();
-
-    let endpointOut = null;
-    let endpointIn = null;
-
-    // البحث عن الـ Bulk Endpoints بشكل ديناميكي عبر كل الواجهات المتاحة
-    // هذا يحل مشكلة الـ undefined عند استخدام وصلات OTG أو تعريفات مختلفة
-    for (const iface of device.configuration.interfaces) {
-        for (const alt of iface.alternates) {
-            const outEp = alt.endpoints.find(e => e.direction === 'out' && e.type === 'bulk');
-            const inEp = alt.endpoints.find(e => e.direction === 'in' && e.type === 'bulk');
-            
-            if (outEp && inEp) {
-                endpointOut = outEp.endpointNumber;
-                endpointIn = inEp.endpointNumber;
-                break;
-            }
-        }
-        if (endpointOut !== null) break;
-    }
-
-    if (endpointOut === null || endpointIn === null) {
+    
+    const setup = await findInterfaceAndEndpoints(device, 'bulk');
+    if (!setup) {
         throw new Error("Samsung Odin bulk endpoints not found. Ensure device is in Download Mode.");
     }
+
+    const { endpointOut, endpointIn } = setup;
 
     // تحويل النص إلى Buffer بطول 512 بايت (حجم الحزمة القياسي في Odin)
     const packet = new Uint8Array(512);
