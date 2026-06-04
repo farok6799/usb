@@ -952,9 +952,11 @@ if (btnDownloadReboot) {
     });
 }
 
-// وظيفة مساعدة ذكية لإيجاد الواجهة والنقاط الطرفية (Endpoints)
+// وظيفة مساعدة ذكية لإيجاد الواجهة والنقاط الطرفية وتفعيلها
 async function findInterfaceAndEndpoints(device, type = 'bulk') {
-    if (!device.configuration) await device.selectConfiguration(1);
+    try {
+        if (!device.configuration) await device.selectConfiguration(1);
+    } catch (e) { console.warn("Config error", e); }
 
     for (const iface of device.configuration.interfaces) {
         for (const alt of iface.alternates) {
@@ -962,15 +964,20 @@ async function findInterfaceAndEndpoints(device, type = 'bulk') {
             const inEp = alt.endpoints.find(e => e.direction === 'in' && e.type === type);
             
             if (outEp && inEp) {
-                // محاولة تفعيل الواجهة
-                if (!iface.claimed) {
+                try {
+                    // خطوة حاسمة لـ OTG: المطالبة بالواجهة وتحديد الوضع البديل
                     await device.claimInterface(iface.interfaceNumber);
+                    await device.selectAlternateInterface(iface.interfaceNumber, alt.alternateSetting);
+                    
+                    return {
+                        interfaceNumber: iface.interfaceNumber,
+                        endpointOut: outEp.endpointNumber,
+                        endpointIn: inEp.endpointNumber
+                    };
+                } catch (e) {
+                    console.warn(`Interface ${iface.interfaceNumber} busy, skipping...`);
+                    continue;
                 }
-                return {
-                    interfaceNumber: iface.interfaceNumber,
-                    endpointOut: outEp.endpointNumber,
-                    endpointIn: inEp.endpointNumber
-                };
             }
         }
     }
@@ -1013,33 +1020,38 @@ async function runFastbootCommand(device, command) {
 }
 
 // دالة مساعدة لإرسال واستقبال حزم Odin (Download Mode)
-async function transferOdinPacket(device, commandText) {
+async function transferOdinPacket(device, commandText, timeoutMs = 2000) {
     const encoder = new TextEncoder();
     const decoder = new TextDecoder();
     
     const setup = await findInterfaceAndEndpoints(device, 'bulk');
-    if (!setup) {
-        throw new Error("Samsung Odin bulk endpoints not found. Ensure device is in Download Mode.");
-    }
+    if (!setup) throw new Error("Samsung Odin endpoints not found.");
 
     const { endpointOut, endpointIn } = setup;
-
-    // تحويل النص إلى Buffer بطول 512 بايت (حجم الحزمة القياسي في Odin)
     const packet = new Uint8Array(512);
-    const cmdData = encoder.encode(commandText);
-    packet.set(cmdData);
+    packet.set(encoder.encode(commandText));
 
-    // إرسال الأمر
-    await device.transferOut(endpointOut, packet);
+    try {
+        // إرسال الأمر
+        await device.transferOut(endpointOut, packet);
 
-    // استقبال الرد
-    const result = await device.transferIn(endpointIn, 512);
-    
-    // تنظيف الرد من الـ Null bytes
-    let response = decoder.decode(result.data).replace(/\0/g, '').trim();
-    
-    // إذا كان الرد يبدأ بكلمة الاتصال أو يحتوي على بيانات
-    return response;
+        // حماية من التعليق (Handshake Timeout)
+        const timeoutPromise = new Promise((_, reject) => 
+            setTimeout(() => reject(new Error("TIMEOUT")), timeoutMs)
+        );
+
+        const result = await Promise.race([
+            device.transferIn(endpointIn, 512),
+            timeoutPromise
+        ]);
+
+        return decoder.decode(result.data).replace(/\0/g, '').trim();
+    } catch (e) {
+        if (e.message === "TIMEOUT") {
+            return ""; // نرجع نص فارغ بدل الانهيار عند التعليق
+        }
+        throw e;
+    }
 }
 
 btnFastbootInfo.addEventListener('click', async () => {
