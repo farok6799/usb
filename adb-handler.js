@@ -313,10 +313,16 @@ export async function disableKnox() {
 
 export async function adbReboot(mode = "") {
     if (!currentAdb) return;
-    await currentAdb.subprocess.spawn(`reboot ${mode}`);
-    logRaw(`<span class="color-green">Rebooting ${mode}...</span>`);
-    currentAdb = null;
-    setButtonsState(false);
+    try {
+        logRaw(`<span class="color-green">Sending reboot ${mode} command...</span>`);
+        // نستخدم طريقة "spawn" دون انتظار المخرجات لضمان عدم التعليق
+        currentAdb.subprocess.spawn(`reboot ${mode}`).catch(() => {});
+        
+        // تصفير الحالة فوراً
+        currentAdb = null;
+        setButtonsState(false);
+        statusText.innerText = "Status: Device Rebooting";
+    } catch (e) { logRaw(`<span class="color-red">Reboot Error: ${e.message}</span>`); }
 }
 
 export async function refreshAppList() {

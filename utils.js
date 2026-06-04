@@ -61,6 +61,8 @@ export async function getOrRequestDevice(filters) {
 
 export async function findInterfaceAndEndpoints(device, type = 'bulk') {
     try {
+        // محاولة إجبارية لفتح الجهاز إذا كان مغلقاً (مهم جداً للـ OTG)
+        if (!device.opened) await device.open();
         if (!device.configuration) await device.selectConfiguration(1);
     } catch (e) { console.warn("Config error", e); }
 

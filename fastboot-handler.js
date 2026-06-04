@@ -1,6 +1,6 @@
 import { logRaw, logInfo, statusText, getOrRequestDevice, findInterfaceAndEndpoints } from './utils.js';
 
-async function runFastbootCommand(device, command) {
+async function runFastbootCommand(device, command, expectResponse = true) {
     const encoder = new TextEncoder();
     const decoder = new TextDecoder();
     
@@ -11,6 +11,9 @@ async function runFastbootCommand(device, command) {
 
     // إرسال الأمر
     await device.transferOut(setup.endpointOut, encoder.encode(command));
+
+    // في حال الـ Reboot عبر OTG، نخرج فوراً قبل أن يفصل النظام الاتصال
+    if (!expectResponse) return ["OKAY"];
 
     let results = [];
     let done = false;
@@ -71,7 +74,9 @@ export async function fastbootReboot() {
         const device = await getOrRequestDevice([{ classCode: 0xff, subclassCode: 0x42, protocolCode: 0x03 }]);
 
         logRaw(`<br><span class="color-blue">Sending 'fastboot reboot'...</span>`);
-        await runFastbootCommand(device, 'reboot');
+        
+        // نرسل الأمر ولا ننتظر رد (expectResponse = false)
+        await runFastbootCommand(device, 'reboot', false);
         
         logRaw(`<span class="color-green">Device is rebooting to system.</span>`);
         await device.releaseInterface(0);
