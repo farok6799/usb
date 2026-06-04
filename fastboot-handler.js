@@ -8,12 +8,17 @@ async function runFastbootCommand(device, command, expectResponse = true) {
     if (!setup) throw new Error("Fastboot endpoints not found.");
 
     const { endpointOut, endpointIn } = setup;
+    let currentInterface = setup.interfaceNumber;
 
     // إرسال الأمر
     await device.transferOut(setup.endpointOut, encoder.encode(command));
 
-    // في حال الـ Reboot عبر OTG، نخرج فوراً قبل أن يفصل النظام الاتصال
-    if (!expectResponse) return ["OKAY"];
+    // في حال الـ Reboot عبر OTG: اخرج فوراً ولا تلمس أي شيء آخر
+    if (!expectResponse) {
+        // تأخير بسيط جداً لضمان وصول الأمر للمتحكم
+        await new Promise(r => setTimeout(r, 50));
+        return { results: ["OKAY"], interfaceUsed: currentInterface };
+    }
 
     let results = [];
     let done = false;
@@ -33,7 +38,7 @@ async function runFastbootCommand(device, command, expectResponse = true) {
             done = true; // رد غير معروف
         }
     }
-    return results;
+    return { results, interfaceUsed: currentInterface };
 }
 
 export async function fastbootInfo() {
@@ -46,9 +51,9 @@ export async function fastbootInfo() {
         logRaw(`<br><span class="color-purple">--- Fastboot Device Connected ---</span>`);
         logRaw(`<span class="color-blue">Reading variables (getvar:all)...</span>`);
 
-        const data = await runFastbootCommand(device, 'getvar:all');
+        const { results, interfaceUsed } = await runFastbootCommand(device, 'getvar:all');
         
-        data.forEach(line => {
+        results.forEach(line => {
             if (line.includes(':')) {
                 const [key, ...val] = line.split(':');
                 logInfo(key.trim(), val.join(':').trim());
@@ -59,7 +64,7 @@ export async function fastbootInfo() {
 
         logRaw(`<span class="color-green">Fastboot operation completed.</span>`);
         
-        await device.releaseInterface(0);
+        await device.releaseInterface(interfaceUsed).catch(() => {});
         statusText.innerText = "Status: Ready";
 
     } catch (e) {
@@ -75,11 +80,11 @@ export async function fastbootReboot() {
 
         logRaw(`<br><span class="color-blue">Sending 'fastboot reboot'...</span>`);
         
-        // نرسل الأمر ولا ننتظر رد (expectResponse = false)
+        // أرسل الأمر واقطع الاتصال برمجياً فوراً قبل أن يشعر الأندرويد بالفصل المفاجئ
         await runFastbootCommand(device, 'reboot', false);
         
         logRaw(`<span class="color-green">Device is rebooting to system.</span>`);
-        await device.releaseInterface(0);
+        // لا يتم عمل releaseInterface هنا لأن الجهاز في طور الإغلاق بالفعل
         statusText.innerText = "Status: Ready";
     } catch (e) {
         logRaw(`<br><span class="color-red">Fastboot Error: ${e.message}</span>`);
