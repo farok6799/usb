@@ -45,6 +45,7 @@ bindAction('btnDownloadReboot', samsung.odinReboot);
 
 // Apple Actions
 bindAction('btnApple', apple.readAppleInfo);
+bindAction('btnEnterRecovery', apple.enterAppleRecovery);
 bindAction('btnExitRecovery', apple.exitAppleRecovery);
 
 // Fastboot & Honor Actions

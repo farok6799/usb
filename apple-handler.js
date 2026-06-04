@@ -73,6 +73,40 @@ export async function readAppleInfo() {
     }
 }
 
+export async function enterAppleRecovery() {
+    try {
+        if (!navigator.usb) throw new Error("WebUSB not supported.");
+
+        statusText.innerText = "Status: Connecting to Apple Device...";
+        
+        // البحث عن الجهاز في الوضع العادي
+        const device = await navigator.usb.requestDevice({
+            filters: [{ vendorId: 0x05ac, productId: 0x12a8 }]
+        });
+
+        await device.open();
+        setActiveUsbDevice(device);
+
+        logRaw(`<br><span class="color-purple">—————————————————————————————————————</span>`);
+        logRaw(`<span class="color-purple">    APPLE ADVANCED CONTROL ACTIVE     </span>`);
+        logRaw(`<span class="color-purple">—————————————————————————————————————</span>`);
+
+        logRaw(`<span class="color-blue">[Action] Requesting device to enter Recovery Mode...</span>`);
+        
+        logRaw(`<br><span class="color-red"><b>Technical Limitation:</b></span>`);
+        logRaw(`<span class="color-blue">Entering Recovery from Normal mode requires an encrypted Lockdown session. 
+        In a web environment, please use manual buttons (Vol Up, Vol Down, then hold Power) or a local tool with pairing keys.</span>`);
+
+        statusText.innerText = "Status: Ready";
+        await device.close().catch(() => {});
+        setActiveUsbDevice(null);
+
+    } catch (e) {
+        logRaw(`<br><span class="color-red"><b>Error:</b> ${e.message}</span>`);
+        statusText.innerText = "Status: Error";
+    }
+}
+
 export async function exitAppleRecovery() {
     try {
         if (!navigator.usb) throw new Error("WebUSB not supported.");
