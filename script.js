@@ -1014,11 +1014,29 @@ async function runFastbootCommand(device, command) {
 async function transferOdinPacket(device, commandText) {
     const encoder = new TextEncoder();
     const decoder = new TextDecoder();
-    
-    // وضع الداونلود لسامسونج عادة ما يستخدم الواجهة 0
-    const iface = device.configuration.interfaces[0];
-    const endpointOut = iface.alternates[0].endpoints.find(e => e.direction === 'out').endpointNumber;
-    const endpointIn = iface.alternates[0].endpoints.find(e => e.direction === 'in').endpointNumber;
+
+    let endpointOut = null;
+    let endpointIn = null;
+
+    // البحث عن الـ Bulk Endpoints بشكل ديناميكي عبر كل الواجهات المتاحة
+    // هذا يحل مشكلة الـ undefined عند استخدام وصلات OTG أو تعريفات مختلفة
+    for (const iface of device.configuration.interfaces) {
+        for (const alt of iface.alternates) {
+            const outEp = alt.endpoints.find(e => e.direction === 'out' && e.type === 'bulk');
+            const inEp = alt.endpoints.find(e => e.direction === 'in' && e.type === 'bulk');
+            
+            if (outEp && inEp) {
+                endpointOut = outEp.endpointNumber;
+                endpointIn = inEp.endpointNumber;
+                break;
+            }
+        }
+        if (endpointOut !== null) break;
+    }
+
+    if (endpointOut === null || endpointIn === null) {
+        throw new Error("Samsung Odin bulk endpoints not found. Ensure device is in Download Mode.");
+    }
 
     // تحويل النص إلى Buffer بطول 512 بايت (حجم الحزمة القياسي في Odin)
     const packet = new Uint8Array(512);
