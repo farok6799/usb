@@ -872,16 +872,17 @@ if (btnReadDownloadInfo) {
                 
                 await transferOdinPacket(device, "ODIN"); // بدء الجلسة
 
-                // جلب المعلومات العميقة عبر أوامر GETVAR
-                const model = await transferOdinPacket(device, "GETVAR:product");
-                const csc = await transferOdinPacket(device, "GETVAR:sales-code");
-                const ap = await transferOdinPacket(device, "GETVAR:boot-version");
-                const did = await transferOdinPacket(device, "GETVAR:did");
+                // محاولة جلب البيانات بمفاتيح بديلة تتوافق مع الأجهزة الجديدة
+                // Samsung devices often use these keys:
+                const model = await transferOdinPacket(device, "GETVAR:model_name") || await transferOdinPacket(device, "GETVAR:product");
+                const csc = await transferOdinPacket(device, "GETVAR:sales_code") || await transferOdinPacket(device, "GETVAR:sales-code");
+                const ap = await transferOdinPacket(device, "GETVAR:version-apsv") || await transferOdinPacket(device, "GETVAR:boot-version");
+                const did = await transferOdinPacket(device, "GETVAR:did") || await transferOdinPacket(device, "GETVAR:did_id");
                 const storage = await transferOdinPacket(device, "GETVAR:storage-size");
-                const uniqueNum = await transferOdinPacket(device, "GETVAR:unique-id");
+                const uniqueNum = await transferOdinPacket(device, "GETVAR:unique_number") || await transferOdinPacket(device, "GETVAR:unique-id");
                 
                 logRaw(`<br><span class="color-purple">—————————————————————————————————————</span>`);
-                logInfo('Model', model || device.productName);
+                logInfo('Model', (model === "LOKE" || !model) ? device.productName : model);
                 logInfo('CSC', csc || "N/A");
                 logInfo('AP version', ap || "N/A");
                 logInfo('Bit', ap ? ap.charAt(ap.length - 5) : "N/A");
@@ -942,9 +943,10 @@ if (btnDownloadReboot) {
             const device = await getOrRequestDevice(filters);
             
             logRaw(`<br><span class="color-blue">Sending 'REBOOT' command to Samsung device...</span>`);
-            // إرسال أمر إعادة التشغيل عبر بروتوكول Odin
-            await transferOdinPacket(device, "REBOOT");
-            logRaw(`<span class="color-green">[Success] Device is rebooting to System.</span>`);
+            // نرسل الأمر بدون انتظار رد (expectResponse = false) لأن الجهاز يغلق المنفذ فوراً
+            await transferOdinPacket(device, "REBOOT", 1000, false);
+            
+            logRaw(`<span class="color-green">[Success] Reboot command sent. Device should restart.</span>`);
             statusText.innerText = "Status: Ready";
         } catch (err) {
             logRaw(`<br><span class="color-red">Download Reboot FAIL: ${err.message}</span>`);
@@ -1020,7 +1022,7 @@ async function runFastbootCommand(device, command) {
 }
 
 // دالة مساعدة لإرسال واستقبال حزم Odin (Download Mode)
-async function transferOdinPacket(device, commandText, timeoutMs = 2000) {
+async function transferOdinPacket(device, commandText, timeoutMs = 2000, expectResponse = true) {
     const encoder = new TextEncoder();
     const decoder = new TextDecoder();
     
@@ -1034,6 +1036,9 @@ async function transferOdinPacket(device, commandText, timeoutMs = 2000) {
     try {
         // إرسال الأمر
         await device.transferOut(endpointOut, packet);
+
+        // إذا كان الأمر ريبوت، لا ننتظر رداً لأن الجهاز سيفصل
+        if (!expectResponse) return "OKAY";
 
         // حماية من التعليق (Handshake Timeout)
         const timeoutPromise = new Promise((_, reject) => 
