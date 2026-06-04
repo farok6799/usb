@@ -658,13 +658,15 @@ btnMTP.addEventListener('click', async () => {
 
         let port;
         try {
-            // طلب الوصول مع فلتر لشركة سامسونج فقط لتسهيل الاختيار
-            port = await navigator.serial.requestPort({
-                filters: [{ usbVendorId: 0x04E8 }] 
-            });
+            // محاولة طلب المنفذ مع فلتر مرن لسامسونج
+            port = await navigator.serial.requestPort({ filters: [{ usbVendorId: 0x04e8 }] });
         } catch (portErr) {
             if (portErr.name === 'NotFoundError') {
-                throw new Error("No port selected. Please click the button and select the device.");
+                logRaw(`<span class="color-blue">[OTG-Fix] Device not found with Samsung filter. Trying universal search...</span>`);
+                // محاولة أخيرة بدون فلاتر لضمان ظهور الجهاز في قائمة الـ OTG على أندرويد
+                try {
+                    port = await navigator.serial.requestPort({});
+                } catch (e) { throw new Error("No device selected or recognized as a Serial Port."); }
             }
             throw portErr;
         }
@@ -703,11 +705,11 @@ btnMTP.addEventListener('click', async () => {
         try {
             await tryOpen(port);
         } catch (openErr) {
-            console.error(openErr);
-            throw new Error(
-                "PORT LOCKED: Windows is preventing access to the Samsung Modem driver. \n" + 
-                "ULTIMATE FIX: Change driver in Device Manager to 'USB Serial Device (Microsoft)'."
-            );
+            if (navigator.userAgent.includes("Android")) {
+                throw new Error("ACCESS_DENIED: Android OS is blocking the Serial port. Try re-plugging OTG.");
+            } else {
+                throw new Error("PORT LOCKED: Windows is blocking the driver. Use 'USB Serial Device' in Device Manager.");
+            }
         }
 
         statusText.innerText = "Status: Connected via Serial";
@@ -786,7 +788,9 @@ btnMTP.addEventListener('click', async () => {
 
         const isAwake = await wakeupDevice();
         if (!isAwake) {
-            throw new Error("Modem not responding. Tips: Re-plug cable OR dial *#0808# and select 'DM+MODEM+ADB'.");
+            logRaw(`<span class="color-red"><b>CRITICAL:</b> Modem interface not active.</span>`);
+            logRaw(`<span class="color-purple">Steps for Samsung: dial <b>*#0808#</b> -> select <b>'DM + MODEM + ADB'</b> -> Reboot.</span>`);
+            throw new Error("Modem handshake failed.");
         }
 
         const cleanResponse = (res, cmd) => {
