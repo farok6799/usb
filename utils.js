@@ -3,6 +3,7 @@ export const statusText = document.getElementById('statusText');
 
 export function logRaw(html) {
     const entry = document.createElement('div');
+    entry.className = 'log-entry';
     entry.innerHTML = html;
     terminal.appendChild(entry);
     terminal.scrollTop = terminal.scrollHeight;
@@ -18,19 +19,26 @@ export function logInfo(label, value) {
     `);
 }
 
-export async function setButtonsState(enabled) {
-    const btnRebootMenu = document.getElementById('btnRebootMenu');
-    if (btnRebootMenu) btnRebootMenu.disabled = !enabled;
-    
+export function setButtonsState(enabled) {
+    // الأزرار التي يجب التحكم في حالتها أثناء تنفيذ العمليات (Busy State)
     const actionButtons = [
-        document.getElementById('btnKnox'),
-        document.getElementById('btnAppManager'),
-        document.getElementById('btnFRP')
+        'btnConnect', 'btnReadInfo', 'btnKnox', 'btnAppManager', 'btnFRP', 
+        'btnReboot', 'btnDownload', 'btnFastboot', 'btnRecovery',
+        'btnMTP', 'btnReadDownloadInfo', 'btnDownloadReboot',
+        'btnApple', 'btnEnterRecovery', 'btnExitRecovery',
+        'btnFastbootInfo', 'btnFastbootReboot', 'btnHonorInfo', 'btnHonorFRP',
+        'btnADBMenu', 'btnRebootMenu', 'btnFastbootMenu',
+        'btnDownloadMenu', 'btnAppleMenu', 'btnCustomAdbMenu',
+        'btnExecuteCustomAdb', 'btnExecuteCustomFastboot', 'btnClear'
     ];
-    actionButtons.forEach(btn => {
-        if (!btn) return;
-        if (enabled) btn.classList.remove('disabled-link');
-        else btn.classList.add('disabled-link');
+    
+    actionButtons.forEach(id => {
+        const btn = document.getElementById(id);
+        if (btn) {
+            btn.disabled = !enabled;
+            if (enabled) btn.classList.remove('disabled-link');
+            else btn.classList.add('disabled-link');
+        }
     });
 }
 
@@ -40,16 +48,25 @@ export function setActiveUsbDevice(device) {
 
 export let activeUsbDevice = null;
 export async function getOrRequestDevice(filters) {
-    // 1. البحث عن جهاز متصل ومفتوح بالفعل
-    if (activeUsbDevice && activeUsbDevice.opened) return activeUsbDevice;
+    // التحقق مما إذا كان الجهاز الحالي هو المطلوب ومفتوح بالفعل
+    if (activeUsbDevice && activeUsbDevice.opened) {
+        const isMatch = filters.some(f => f.vendorId === activeUsbDevice.vendorId && 
+                        (!f.productId || f.productId === activeUsbDevice.productId));
+        if (isMatch) return activeUsbDevice;
+    }
 
-    // 2. ابحث في الأجهزة المقترنة مسبقاً
+    // إذا كان هناك جهاز مختلف مفتوح، نغلقه
+    if (activeUsbDevice) {
+        try { 
+            if (activeUsbDevice.opened) await activeUsbDevice.close(); 
+        } catch(e) {}
+    }
+
     const pairedDevices = await navigator.usb.getDevices();
-    let device = pairedDevices.find(d =>
-        filters.some(f => (f.vendorId === d.vendorId && (!f.productId || f.productId === d.productId)))
-    );
+    let device = pairedDevices.find(d => filters.some(f => 
+        f.vendorId === d.vendorId && (!f.productId || f.productId === d.productId)
+    ));
 
-    // 3. في أندرويد OTG، يفضل طلب الجهاز دائماً إذا لم تكن هناك جلسة مفتوحة لضمان الصلاحيات
     if (!device) device = await navigator.usb.requestDevice({ filters });
     
     await device.open();
@@ -69,8 +86,12 @@ export async function findInterfaceAndEndpoints(device, type = 'bulk') {
             
             if (outEp && inEp) {
                 try {
-                    // خطوة حاسمة لـ OTG: المطالبة بالواجهة وتحديد الوضع البديل (كما في الملف القديم)
-                    await device.claimInterface(iface.interfaceNumber);
+                    // التحقق مما إذا كانت الواجهة محجوزة بالفعل لتجنب خطأ State Change
+                    if (!iface.claimed) {
+                        await device.claimInterface(iface.interfaceNumber);
+                    }
+                    
+                    // تحديد الوضع البديل فقط إذا لم يكن هو الوضع النشط حالياً
                     await device.selectAlternateInterface(iface.interfaceNumber, alt.alternateSetting);
                     
                     return {
@@ -86,4 +107,21 @@ export async function findInterfaceAndEndpoints(device, type = 'bulk') {
         }
     }
     return null;
+}
+
+// وظيفة التحديث الدوري لحالة الجهاز
+export async function autoDetectTask() {
+    try {
+        const devices = await navigator.usb.getDevices();
+        if (devices.length > 0) {
+            const dev = devices[0];
+            const mode = dev.opened ? "Active" : "Ready";
+            statusText.innerHTML = `Status: <span class="color-green">${dev.productName || 'Device'} [${mode}]</span>`;
+        } else {
+            // لا نغير حالة الأزرار هنا لنسمح بالاتصال التلقائي عند الضغط
+            if (!statusText.innerText.includes("Error") && !statusText.innerText.includes("Reading")) {
+                statusText.innerText = "Status: Waiting for device...";
+            }
+        }
+    } catch (e) {}
 }

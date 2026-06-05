@@ -39,6 +39,16 @@
                     <a href="#" id="btnAppManager" class="disabled-link"><i data-lucide="layout-grid"></i> App Manager</a>
                     <a href="#" id="btnKnox" class="disabled-link"><i data-lucide="shield-off"></i> Disable Knox</a>
                     <a href="#" id="btnFRP" class="disabled-link"><i data-lucide="unlock"></i> Reset FRP</a>
+                    <div class="dropdown-divider"></div>
+                    <div class="custom-command-area" style="padding: 10px;">
+                        <div style="display: flex; flex-direction: column; gap: 8px;">
+                            <input type="text" id="customAdbCommandInput" placeholder="Enter ADB command (e.g., shell ls)" 
+                                   style="width: 100%; background: #333; border: 1px solid #444; color: #fff; padding: 8px; border-radius: 4px; box-sizing: border-box;">
+                            <button id="btnExecuteCustomAdb" class="btn-primary" style="width: 100%; padding: 8px;">
+                                <i data-lucide="send"></i> Execute
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -53,6 +63,16 @@
                     <div class="dropdown-header">HONOR / HUAWEI Special</div>
                     <a href="#" id="btnHonorInfo"><i data-lucide="cpu"></i> Read HONOR Detailed Info</a>
                     <a href="#" id="btnHonorFRP"><i data-lucide="unlock"></i> HONOR Reset FRP</a>
+                    <div class="dropdown-divider"></div>
+                    <div class="custom-command-area" style="padding: 10px;">
+                        <div style="display: flex; flex-direction: column; gap: 8px;">
+                            <input type="text" id="customFastbootCommandInput" placeholder="Enter Fastboot command (e.g., getvar all)" 
+                                   style="width: 100%; background: #333; border: 1px solid #444; color: #fff; padding: 8px; border-radius: 4px; box-sizing: border-box;">
+                            <button id="btnExecuteCustomFastboot" class="btn-primary" style="width: 100%; padding: 8px;">
+                                <i data-lucide="send"></i> Execute Fastboot
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </div>
 

@@ -57,22 +57,15 @@ function sanitizeValue(text) {
 
 export function resetAdbState() {
     currentAdb = null;
+    isConnecting = false;
 }
 
-export async function connectADB() {
+async function initializeAdbSession() {
     if (isConnecting) return;
     try {
         isConnecting = true;
-        if (currentAdb) {
-            logRaw("<span class='color-blue'>[Info] Device is already connected.</span>");
-            return;
-        }
-        
-        if (!navigator.usb) {
-            throw new Error("Your browser does not support WebUSB. Please use Chrome or Edge.");
-        }
+        if (!navigator.usb) throw new Error("Your browser does not support WebUSB. Please use Chrome or Edge.");
 
-        // حل مشكلة claimInterface: إغلاق أي جلسة نشطة قبل البدء
         if (activeUsbDevice && activeUsbDevice.opened) {
             logRaw("<span class='color-blue'>[System] Releasing previous USB handle...</span>");
             await activeUsbDevice.close().catch(() => {});
@@ -83,8 +76,6 @@ export async function connectADB() {
         if (!Manager) throw new Error("AdbDaemonWebUsbDeviceManager is not initialized.");
 
         let device = null;
-        
-        // نحاول جلب الأجهزة المقترنة أولاً، وإذا لم نجد نطلب الجهاز فوراً للحفاظ على الـ Gesture
         const pairedDevices = await Manager.getDevices();
         if (pairedDevices.length > 0) {
             device = pairedDevices[0];
@@ -104,17 +95,52 @@ export async function connectADB() {
         });
         currentAdb = new Adb(transport);
         setActiveUsbDevice(device.raw || device); // Update global session
+        await setButtonsState(true);
+        return true;
+    } catch (err) {
+        let errorMsg = err.message;
+        if (errorMsg.includes('claimInterface')) {
+            errorMsg = "Interface Busy. Please close ADB.exe or other tools (Odin/Z3X) and try again.";
+        }
+        logRaw(`<br><span class='color-red'>ADB Connection Fail: ${errorMsg}</span>`);
+        statusText.innerText = "Status: Connection Error";
+        await resetAdbState();
+        await setButtonsState(true); // فك قفل الأزرار للسماح بالمحاولة مرة أخرى
+        return false;
+    } finally {
+        isConnecting = false;
+    }
+}
 
-        statusText.innerText = "Status: Reading Data...";
-        
+export async function ensureAdb() {
+if (currentAdb) return true;
+    return await initializeAdbSession();
+}
+
+export async function connectADB() {
+    try {
+        if (!(await ensureAdb())) return;
         logRaw(`<br><span class="color-purple">—————————————————————————————————————</span>`);
-        logRaw(`<span class="color-purple">    MOSTAFA UNLOCKER ENGINE ACTIVE    </span>`);
+        logRaw(`<span class="color-purple">    ADB DEVICE CONNECTED SUCCESSFULLY  </span>`);
         logRaw(`<span class="color-purple">—————————————————————————————————————</span>`);
-        logRaw(`<span class="color-green">Using port WebUSB Device (${device.serial})</span>`);
-        logRaw(`<span class="color-green">Reading info mode ADB ... [SUCCESS]</span>`);
+        logRaw(`<span class="color-green">Serial: ${activeUsbDevice.serialNumber || 'N/A'}</span>`);
+        logRaw(`<span class="color-blue">[Ready] All ADB operations are now active.</span>`);
+        statusText.innerText = "Status: ADB Ready";
+
+        // تشغيل قراءة المعلومات تلقائياً فور نجاح الاتصال
+        await readDeviceInfo();
+    } catch (e) {
+        logRaw(`<br><span class="color-red">ADB Connection Error: ${e.message}</span>`);
+    }
+}
+
+export async function readDeviceInfo() {
+    try {
+        if (!(await ensureAdb())) return;
+        statusText.innerText = "Status: Reading Data...";
+        logRaw(`<br><span class="color-blue">[System] Extracting device information...</span>`);
 
         const props = await execShell(currentAdb, 'getprop');
-        
         const androidId = await execShell(currentAdb, 'settings get secure android_id');
         const hasSu = (await execShell(currentAdb, 'which su')) ? 'YES' : 'NO';
         const magiskVer = (await execShell(currentAdb, 'magisk -v')) || 'NO';
@@ -186,7 +212,7 @@ export async function connectADB() {
         logInfo('Physical SN', snPhysical);
         logInfo('IMEI 1', (imei1 !== 'N/A' && !/^0+$/.test(imei1)) ? imei1 : '<span class="color-red">NOT FOUND / LOCKED</span>');
         logInfo('IMEI 2', (imei2 !== 'N/A' && !/^0+$/.test(imei2)) ? imei2 : '<span class="color-red">NOT FOUND / LOCKED</span>');
-        logInfo('Unique ID', device.serial);
+        logInfo('Unique ID', activeUsbDevice.serialNumber || 'N/A');
 
         logRaw(`<br><span class="color-purple">--- Software Information ---</span>`);
         logInfo('Build', extractProp(props, 'ro.build.display.id'));
@@ -212,25 +238,18 @@ export async function connectADB() {
         logInfo('Magisk Binary', magiskVer);
         logInfo('FRP status', frpStatus);
 
-        logRaw(`<br><span class="color-green">Operation completed successfully.</span>`);
-
-        await setButtonsState(true);
+        logRaw(`<br><span class="color-green">Read Info completed successfully.</span>`);
         statusText.innerText = "Status: Ready";
-    } catch (err) {
-        let errorMsg = err.message;
-        if (errorMsg.includes('claimInterface')) {
-            errorMsg = "Interface Busy. Please close ADB.exe or other tools (Odin/Z3X) and try again.";
-        }
-        logRaw(`<br><span class='color-red'>ADB Fail: ${errorMsg}</span>`);
-        statusText.innerText = "Status: Error";
-        if (currentAdb) { await currentAdb.close().catch(() => {}); currentAdb = null; }
+    } catch (e) {
+        logRaw(`<br><span class="color-red">Read Info Error: ${e.message}</span>`);
     } finally {
-        isConnecting = false;
+        await setButtonsState(true);
     }
 }
 
 export async function resetFRP() {
-    if (!currentAdb) return;
+    if (!(await ensureAdb())) return;
+    await setButtonsState(false);
     try {
         logRaw(`<br><span class="color-purple">--- Starting Samsung FRP Reset Process ---</span>`);
         statusText.innerText = "Status: Searching for FRP Partition...";
@@ -272,11 +291,14 @@ export async function resetFRP() {
     } catch (e) { 
         logRaw(`<br><span class="color-red">FRP Reset FAIL: ${e.message}</span>`); 
         statusText.innerText = "Status: FRP Reset Failed";
+    } finally {
+        await setButtonsState(true);
     }
 }
 
 export async function disableKnox() {
-    if (!currentAdb) return;
+    if (!(await ensureAdb())) return;
+    await setButtonsState(false);
     const knoxPackages = [
         "com.samsung.android.sm.devicesecurity",
         "com.samsung.klmsagent",
@@ -308,11 +330,14 @@ export async function disableKnox() {
         statusText.innerText = "Status: Ready (Knox Process Finished)";
     } catch (err) {
         logRaw(`<br><span class="color-red">Knox Disable FAIL: ${err.message}</span>`);
+    } finally {
+        await setButtonsState(true);
     }
 }
 
 export async function adbReboot(mode = "") {
-    if (!currentAdb) return;
+    if (!(await ensureAdb())) return;
+    await setButtonsState(false);
     try {
         logRaw(`<span class="color-green">Sending reboot ${mode} command...</span>`);
         // نستخدم طريقة "spawn" دون انتظار المخرجات لضمان عدم التعليق
@@ -320,13 +345,15 @@ export async function adbReboot(mode = "") {
         
         // تصفير الحالة فوراً
         currentAdb = null;
-        setButtonsState(false);
         statusText.innerText = "Status: Device Rebooting";
     } catch (e) { logRaw(`<span class="color-red">Reboot Error: ${e.message}</span>`); }
+    finally {
+        setTimeout(() => setButtonsState(true), 3000);
+    }
 }
 
 export async function refreshAppList() {
-    if (!currentAdb) return;
+    if (!(await ensureAdb())) return;
     const body = document.getElementById('appTableBody');
     body.innerHTML = "<tr><td colspan='4'>Loading...</td></tr>";
     const raw = await execShell(currentAdb, 'pm list packages -f --user 0');
@@ -380,7 +407,7 @@ window.appAction = async (pkg, action) => {
 };
 
 export async function installApk(file) {
-    if (!currentAdb) return;
+    if (!(await ensureAdb())) return;
     const progressBar = document.getElementById('installProgressBar');
     const progressCont = document.getElementById('installProgressContainer');
     const percentText = document.getElementById('installPercent');
@@ -418,5 +445,17 @@ export async function installApk(file) {
         setTimeout(() => { progressCont.style.display = 'none'; }, 2000);
         if (apkInput) apkInput.value = '';
         await refreshAppList();
+    }
+}
+
+export async function executeCustomCommand(command) {
+    if (!(await ensureAdb())) return;
+    try {
+        logRaw(`<span class="color-blue">> adb ${command}</span>`);
+        const output = await execShell(currentAdb, command);
+        // عرض النتيجة بتنسيق نظيف داخل Terminal
+        logRaw(`<div class="color-white" style="background: rgba(255,255,255,0.05); padding: 5px; border-radius: 4px; font-family: monospace; white-space: pre-wrap;">${output || '(No output returned)'}</div>`);
+    } catch (e) {
+        logRaw(`<span class="color-red">Execution Error: ${e.message}</span>`);
     }
 }
