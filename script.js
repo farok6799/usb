@@ -10,10 +10,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // بدء التحديث الدوري كل 2 ثانية
     setInterval(autoDetectTask, 2000);
 
-    // إضافة صوت بسيط (اختياري) أو تأثير وميض عند التحميل
-    logRaw(`<span class="color-blue">[System] Initializing Neural Link...</span>`);
-    logRaw(`<span class="color-cyan">[System] Cyber-Core UI Module Active.</span>`);
-    
     // تفعيل الأزرار فوراً عند تحميل الصفحة
     setButtonsState(true);
 
@@ -162,7 +158,6 @@ const appSearchInput = document.getElementById('appSearch');
 if (appSearchInput) appSearchInput.oninput = adb.renderApps;
 const appFilterSelect = document.getElementById('appFilter');
 if (appFilterSelect) appFilterSelect.onchange = adb.renderApps;
-
     // Mobile Menu Toggle Logic
     const menuToggle = document.getElementById('menuToggle');
     const sidebar = document.getElementById('sidebar');

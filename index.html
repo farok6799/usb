@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mostafa Unlocker Dashboard</title>
+    <title>Mostafa Unlocker Web tool</title>
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net https://esm.sh; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://esm.sh https://cdn.jsdelivr.net;">
     <link rel="stylesheet" href="style.css">
     <!-- Lucide Icons -->
@@ -20,13 +20,12 @@
         <aside class="sidebar" id="sidebar">
             <div class="sidebar-header">
                 <i data-lucide="zap" class="logo-icon"></i>
-                <span class="logo-text">MOSTAFA <small>v1.0.3</small></span>
+                <span class="logo-text">Mostafa Unlocker Web tool</span>
             </div>
             <nav class="sidebar-nav">
                 <div class="nav-group">
                     <span class="nav-label">Main</span>
-                    <a href="#" class="nav-item active" data-section="all"><i data-lucide="layout-dashboard"></i> Overview</a>
-                    <a href="#" class="nav-item" data-section="adb"><i data-lucide="smartphone"></i> ADB Ops</a>
+                    <a href="#" class="nav-item active" data-section="adb"><i data-lucide="smartphone"></i> ADB Ops</a>
                     <a href="#" class="nav-item" data-section="fastboot"><i data-lucide="zap"></i> Fastboot</a>
                     <a href="#" class="nav-item" data-section="download"><i data-lucide="download"></i> Samsung Download</a>
                     <a href="#" class="nav-item" data-section="apple"><i data-lucide="apple"></i> Apple & MTP</a>
@@ -85,7 +84,7 @@
                 </section>
 
                 <!-- Fastboot Section Card -->
-                <section id="section-fastboot" class="card fastboot-card">
+                <section id="section-fastboot" class="card fastboot-card hidden-section">
                     <div class="card-header">
                         <h3><i data-lucide="zap"></i> Fastboot Ops</h3>
                         <span class="badge blue">Standby</span>
@@ -105,7 +104,7 @@
                 </section>
 
                 <!-- Samsung Download (Odin) Card -->
-                <section id="section-download" class="card download-card">
+                <section id="section-download" class="card download-card hidden-section">
                     <div class="card-header">
                         <h3><i data-lucide="download"></i> Samsung Download (Odin)</h3>
                         <span class="badge blue">Odin Mode</span>
@@ -119,7 +118,7 @@
                 </section>
 
                 <!-- Apple & MTP Card -->
-                <section id="section-apple" class="card apple-card">
+                <section id="section-apple" class="card apple-card hidden-section">
                     <div class="card-header">
                         <h3><i data-lucide="apple"></i> Apple & MTP</h3>
                     </div>
@@ -136,7 +135,7 @@
                 </section>
 
                 <!-- Reboot & Quick Actions -->
-                <section id="section-actions" class="card actions-card">
+                <section id="section-actions" class="card actions-card hidden-section">
                     <div class="card-header">
                         <h3><i data-lucide="power"></i> Quick Actions</h3>
                     </div>
@@ -161,14 +160,14 @@
                         </div>
                     </div>
                     <div id="terminal" class="terminal-body">
-                        <div class="terminal-line welcome">Welcome to Mostafa Unlocker Engine v1.0.3</div>
-                        <div class="terminal-line info">>_ System initialized. Waiting for device...</div>
+                        <div class="terminal-line welcome">Mostafa Unlocker Web tool initialized.</div>
+                        <div class="terminal-line info">>_ Waiting for device connection...</div>
                     </div>
                 </section>
             </div>
 
             <footer class="dashboard-footer">
-                <p>© 2024 MOSTAFA UNLOCKER | PROFESSIONAL EDITION</p>
+                <p>© 2024 Mostafa Unlocker Web tool | Professional Edition</p>
                 <div class="footer-links">
                     <span>Privacy</span>
                     <span>Terms</span>

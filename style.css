@@ -15,7 +15,12 @@
     
     --text-primary: #ffffff;
     --text-secondary: #94a3b8;
+    --text-main: #ffffff;
     --text-muted: #475569;
+    --text-dim: #64748b;
+    
+    --accent-blue-deep: #1d4ed8;
+    --panel-bg: #0d0f11;
     
     --border-color: rgba(255, 255, 255, 0.05);
     --glass-border: rgba(255, 255, 255, 0.08);
@@ -273,8 +278,9 @@ body {
     padding: 24px;
     transition: var(--transition);
     position: relative;
-    overflow: hidden;
-    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    min-height: fit-content;
 }
 
 .card:hover { border-color: rgba(0, 242, 255, 0.2); box-shadow: 0 8px 32px rgba(0,0,0,0.4); }
@@ -283,7 +289,8 @@ body {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-bottom: 24px;
+    margin-bottom: 15px;
+    flex-shrink: 0;
 }
 
 .card-header h3 {
@@ -308,9 +315,36 @@ body {
 .badge.cyan { background: rgba(0, 242, 255, 0.1); color: var(--accent-cyan); }
 .badge.blue { background: rgba(59, 130, 246, 0.1); color: var(--accent-blue); }
 
+.card-body {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    max-height: 320px; /* أقصى ارتفاع قبل ظهور شريط التمرير */
+    overflow-y: auto;  /* تفعيل التمرير عند الحاجة */
+    padding-right: 8px; /* مسافة بسيطة لشريط التمرير */
+    scrollbar-width: thin;
+    scrollbar-color: var(--accent-cyan) transparent;
+}
+
+/* تخصيص شكل شريط التمرير داخل الكارت للمتصفحات التي تدعم Webkit */
+.card-body::-webkit-scrollbar {
+    width: 4px;
+}
+.card-body::-webkit-scrollbar-track {
+    background: transparent;
+}
+.card-body::-webkit-scrollbar-thumb {
+    background: rgba(0, 242, 255, 0.2);
+    border-radius: 10px;
+}
+.card-body::-webkit-scrollbar-thumb:hover {
+    background: var(--accent-cyan);
+}
+
 .button-grid {
     display: grid;
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
     gap: 12px;
 }
 
@@ -430,7 +464,7 @@ button {
 .custom-cmd button { background: var(--bg-card-hover); border: 1px solid var(--border-color); color: var(--accent-cyan); width: 42px; border-radius: var(--radius-md); display: flex; align-items: center; justify-content: center; }
 
 /* Terminal Card */
-.full-width { grid-column: 1 / -1; }
+.full-width { grid-column: 1 / -1; margin-top: 10px; }
 
 .terminal-card {
     background-color: #050607;
@@ -596,6 +630,8 @@ tr:hover td { background: rgba(0, 242, 255, 0.03); }
     .search-area { display: none; }
 
 }
+
+.menu-bar {
     letter-spacing: 1.5px;
     display: flex;
     gap: 25px;
