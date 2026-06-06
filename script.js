@@ -9,9 +9,37 @@ document.addEventListener('DOMContentLoaded', () => {
     console.log("Mostafa Unlocker Web Tool v1.0.3 Modular Loaded.");
     // بدء التحديث الدوري كل 2 ثانية
     setInterval(autoDetectTask, 2000);
+
+    // إضافة صوت بسيط (اختياري) أو تأثير وميض عند التحميل
+    logRaw(`<span class="color-blue">[System] Initializing Neural Link...</span>`);
+    logRaw(`<span class="color-cyan">[System] Cyber-Core UI Module Active.</span>`);
     
     // تفعيل الأزرار فوراً عند تحميل الصفحة
     setButtonsState(true);
+
+    // منطق التبديل بين الأقسام من القائمة الجانبية
+    const navItems = document.querySelectorAll('.nav-item[data-section]');
+    const sections = document.querySelectorAll('.card[id^="section-"]');
+
+    navItems.forEach(item => {
+        item.addEventListener('click', (e) => {
+            e.preventDefault();
+            const targetSection = item.getAttribute('data-section');
+
+            // تحديث حالة الأزرار في السايدبار
+            navItems.forEach(nav => nav.classList.remove('active'));
+            item.classList.add('active');
+
+            // إظهار/إخفاء الكروت
+            sections.forEach(sec => {
+                if (targetSection === 'all') {
+                    sec.classList.remove('hidden-section');
+                } else {
+                    sec.id === `section-${targetSection}` ? sec.classList.remove('hidden-section') : sec.id !== 'terminal' && sec.classList.add('hidden-section');
+                }
+            });
+        });
+    });
 });
 
 navigator.usb.addEventListener('disconnect', (event) => {
@@ -122,6 +150,13 @@ bindAction('btnAppManager', async () => {
     }
 });
 
+bindAction('btnAppManagerSidebar', async () => {
+    if (await adb.ensureAdb()) {
+        document.getElementById('appModal').style.display = "block";
+        await adb.refreshAppList();
+    }
+});
+
 // App Manager specific event listeners
 const appSearchInput = document.getElementById('appSearch');
 if (appSearchInput) appSearchInput.oninput = adb.renderApps;
@@ -137,36 +172,14 @@ document.getElementById('apkInput').onchange = (e) => {
     if (e.target.files.length) adb.installApk(e.target.files[0]);
 };
 
-// Menu Toggles (added btnCustomAdbMenu)
-['btnADBMenu', 'btnRebootMenu', 'btnFastbootMenu', 'btnDownloadMenu', 'btnAppleMenu', 'btnCustomAdbMenu'].forEach(id => {
-    const btn = document.getElementById(id);
-    if (!btn) return;
-    btn.onclick = (e) => {
-        const dropId = id.replace('btn', '').replace('Menu', '').toLowerCase() + "Dropdown";
-        const dropdown = document.getElementById(dropId);
-        
-        // إغلاق أي قائمة أخرى مفتوحة قبل فتح القائمة الحالية
-        document.querySelectorAll(".dropdown-content").forEach(d => {
-            if (d !== dropdown) {
-                d.classList.remove('show');
-            }
-        });
-
-        if (dropdown) dropdown.classList.toggle("show");
-        e.stopPropagation();
-    };
-});
-
 window.onclick = (event) => {
     if (event.target.closest('.close-modal')) document.getElementById('appModal').style.display = "none";
-    if (!event.target.closest('.dropdown')) {
-        document.querySelectorAll(".dropdown-content").forEach(d => d.classList.remove('show'));
-    }
 };
 
-document.getElementById('btnClear').onclick = () => {
+if (document.getElementById('btnClear')) {
+    document.getElementById('btnClear').onclick = () => {
     terminal.innerHTML = `
-        <div class="terminal-header">SYSTEM TERMINAL CLEARED</div>
-        <div class="color-purple">Mostafa Unlocker Engine is ready.</div><br>
+        <div class="terminal-line info">>_ Terminal cleared. System ready.</div>
     `;
-};
+    };
+}

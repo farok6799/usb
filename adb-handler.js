@@ -20,8 +20,14 @@ async function readShellOutput(process) {
 }
 
 async function execShell(adb, command) {
-    const process = await adb.subprocess.spawn(command);
-    return (await readShellOutput(process)).trim();
+    try {
+        const process = await adb.subprocess.spawn(command);
+        return (await readShellOutput(process)).trim();
+    } catch (e) {
+        if (e.message.includes('closed')) resetAdbState();
+        console.warn(`ADB Shell Error [${command}]: ${e.message}`);
+        return 'N/A';
+    }
 }
 
 function extractProp(text, propName) {
@@ -76,6 +82,7 @@ async function initializeAdbSession() {
         if (!Manager) throw new Error("AdbDaemonWebUsbDeviceManager is not initialized.");
 
         let device = null;
+        currentAdb = null; // تصفير الجلسة القديمة قبل البدء
         const pairedDevices = await Manager.getDevices();
         if (pairedDevices.length > 0) {
             device = pairedDevices[0];
@@ -369,8 +376,11 @@ export async function refreshAppList() {
 }
 
 export function renderApps() {
-    const search = document.getElementById('appSearch').value.toLowerCase();
-    const filter = document.getElementById('appFilter').value;
+    const searchInput = document.getElementById('appSearch');
+    const filterSelect = document.getElementById('appFilter');
+    
+    const search = searchInput ? searchInput.value.toLowerCase() : '';
+    const filter = filterSelect ? filterSelect.value : 'all';
     const body = document.getElementById('appTableBody');
     
     const filtered = allPackages.filter(app => {

@@ -3,132 +3,173 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mostafa Unlocker Web Tool</title>
+    <title>Mostafa Unlocker Dashboard</title>
     <link rel="stylesheet" href="style.css">
-    <!-- مكتبة الأيقونات Lucide -->
+    <!-- Lucide Icons -->
     <script src="https://cdn.jsdelivr.net/npm/lucide@0.344.0/dist/umd/lucide.min.js"></script>
 </head>
 <body>
-    <div class="app-window">
-        <div class="title-bar">
-            <div class="brand">
-                <i data-lucide="zap" class="icon-zap"></i>
-                <span>Mostafa Unlocker <small>v1.0.3</small></span>
+    <div class="dashboard-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <i data-lucide="zap" class="logo-icon"></i>
+                <span class="logo-text">MOSTAFA <small>v1.0.3</small></span>
             </div>
-            <div class="window-controls">
-                <span><i data-lucide="minus"></i></span>
-                <span><i data-lucide="square"></i></span>
-                <span class="close-btn"><i data-lucide="x"></i></span>
+            <nav class="sidebar-nav">
+                <div class="nav-group">
+                    <span class="nav-label">Main</span>
+                    <a href="#" class="nav-item active" data-section="all"><i data-lucide="layout-dashboard"></i> Overview</a>
+                    <a href="#" class="nav-item" data-section="adb"><i data-lucide="smartphone"></i> ADB Ops</a>
+                    <a href="#" class="nav-item" data-section="fastboot"><i data-lucide="zap"></i> Fastboot</a>
+                    <a href="#" class="nav-item" data-section="download"><i data-lucide="download"></i> Samsung Download</a>
+                    <a href="#" class="nav-item" data-section="apple"><i data-lucide="apple"></i> Apple & MTP</a>
+                    <a href="#" class="nav-item" data-section="actions"><i data-lucide="power"></i> Quick Actions</a>
+                    <a href="#" id="btnAppManagerSidebar" class="nav-item"><i data-lucide="box"></i> App Manager</a>
+                </div>
+                <div class="nav-group">
+                    <span class="nav-label">Support</span>
+                    <a href="#" class="nav-item premium"><i data-lucide="award"></i> Premium Support</a>
+                    <a href="#" class="nav-item"><i data-lucide="help-circle"></i> Documentation</a>
+                </div>
+            </nav>
+            <div class="sidebar-footer">
+                <div class="connection-status">
+                    <span class="status-dot pulse"></span>
+                    <span id="statusText">System Ready</span>
+                </div>
             </div>
-        </div>
+        </aside>
 
-        <div class="menu-bar">
-            <span class="menu-item">File</span>
-            <span class="menu-item">Operations</span>
-            <span class="menu-item">Settings</span>
-            <span class="menu-item highlight">Premium Support</span>
-        </div>
-
-        <div class="toolbar">
-            <div class="dropdown">
-                <button id="btnADBMenu" class="btn-primary">
-                    <i data-lucide="settings-2"></i> ADB Operations <i data-lucide="chevron-down"></i>
-                </button>
-                <div id="adbDropdown" class="dropdown-content">
-                    <a href="#" id="btnConnect"><i data-lucide="info"></i> Read Info (ADB)</a>
-                    <a href="#" id="btnAppManager" class="disabled-link"><i data-lucide="layout-grid"></i> App Manager</a>
-                    <a href="#" id="btnKnox" class="disabled-link"><i data-lucide="shield-off"></i> Disable Knox</a>
-                    <a href="#" id="btnFRP" class="disabled-link"><i data-lucide="unlock"></i> Reset FRP</a>
-                    <div class="dropdown-divider"></div>
-                    <div class="custom-command-area" style="padding: 10px;">
-                        <div style="display: flex; flex-direction: column; gap: 8px;">
-                            <input type="text" id="customAdbCommandInput" placeholder="Enter ADB command (e.g., shell ls)" 
-                                   style="width: 100%; background: #333; border: 1px solid #444; color: #fff; padding: 8px; border-radius: 4px; box-sizing: border-box;">
-                            <button id="btnExecuteCustomAdb" class="btn-primary" style="width: 100%; padding: 8px;">
-                                <i data-lucide="send"></i> Execute
-                            </button>
-                        </div>
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="top-bar">
+                <div class="search-area">
+                    <i data-lucide="search"></i>
+                    <input type="text" placeholder="Search operations...">
+                </div>
+                <div class="user-controls">
+                    <button class="icon-btn"><i data-lucide="bell"></i></button>
+                    <button class="icon-btn"><i data-lucide="settings"></i></button>
+                    <div class="user-profile">
+                        <div class="avatar">MU</div>
                     </div>
                 </div>
-            </div>
+            </header>
 
-            <div class="dropdown">
-                <button id="btnFastbootMenu" class="btn-secondary">
-                    <i data-lucide="zap"></i> Fastboot Ops <i data-lucide="chevron-down"></i>
-                </button>
-                <div id="fastbootDropdown" class="dropdown-content">
-                    <a href="#" id="btnFastbootInfo"><i data-lucide="info"></i> Read Info (Fastboot)</a>
-                    <a href="#" id="btnFastbootReboot"><i data-lucide="refresh-cw"></i> Reboot System</a>
-                    <div class="dropdown-divider"></div>
-                    <div class="dropdown-header">HONOR / HUAWEI Special</div>
-                    <a href="#" id="btnHonorInfo"><i data-lucide="cpu"></i> Read HONOR Detailed Info</a>
-                    <a href="#" id="btnHonorFRP"><i data-lucide="unlock"></i> HONOR Reset FRP</a>
-                    <div class="dropdown-divider"></div>
-                    <div class="custom-command-area" style="padding: 10px;">
-                        <div style="display: flex; flex-direction: column; gap: 8px;">
-                            <input type="text" id="customFastbootCommandInput" placeholder="Enter Fastboot command (e.g., getvar all)" 
-                                   style="width: 100%; background: #333; border: 1px solid #444; color: #fff; padding: 8px; border-radius: 4px; box-sizing: border-box;">
-                            <button id="btnExecuteCustomFastboot" class="btn-primary" style="width: 100%; padding: 8px;">
-                                <i data-lucide="send"></i> Execute Fastboot
-                            </button>
+            <div class="content-grid">
+                <!-- ADB Section Card -->
+                <section id="section-adb" class="card adb-card">
+                    <div class="card-header">
+                        <h3><i data-lucide="smartphone"></i> ADB Operations</h3>
+                        <span class="badge cyan">Active</span>
+                    </div>
+                    <div class="card-body">
+                        <div class="button-grid">
+                            <button id="btnConnect" class="btn-glow-cyan"><i data-lucide="info"></i> Read Info</button>
+                            <button id="btnAppManager" class="btn-glow-cyan"><i data-lucide="layout-grid"></i> Manager</button>
+                            <button id="btnKnox" class="btn-glow-cyan"><i data-lucide="shield-off"></i> Disable Knox</button>
+                            <button id="btnFRP" class="btn-glow-cyan"><i data-lucide="unlock"></i> Reset FRP</button>
+                        </div>
+                        <div class="custom-cmd">
+                            <input type="text" id="customAdbCommandInput" placeholder="Custom ADB Command...">
+                            <button id="btnExecuteCustomAdb"><i data-lucide="send"></i></button>
                         </div>
                     </div>
+                </section>
+
+                <!-- Fastboot Section Card -->
+                <section id="section-fastboot" class="card fastboot-card">
+                    <div class="card-header">
+                        <h3><i data-lucide="zap"></i> Fastboot Ops</h3>
+                        <span class="badge blue">Standby</span>
+                    </div>
+                    <div class="card-body">
+                        <div class="button-grid">
+                            <button id="btnFastbootInfo" class="btn-glow-blue"><i data-lucide="info"></i> Read Info</button>
+                            <button id="btnFastbootReboot" class="btn-glow-blue"><i data-lucide="refresh-cw"></i> Reboot</button>
+                            <button id="btnHonorInfo" class="btn-glow-blue"><i data-lucide="cpu"></i> Honor Info</button>
+                            <button id="btnHonorFRP" class="btn-glow-blue"><i data-lucide="unlock"></i> Honor FRP</button>
+                        </div>
+                        <div class="custom-cmd">
+                            <input type="text" id="customFastbootCommandInput" placeholder="Custom Fastboot Command...">
+                            <button id="btnExecuteCustomFastboot"><i data-lucide="send"></i></button>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Samsung Download (Odin) Card -->
+                <section id="section-download" class="card download-card">
+                    <div class="card-header">
+                        <h3><i data-lucide="download"></i> Samsung Download (Odin)</h3>
+                        <span class="badge blue">Odin Mode</span>
+                    </div>
+                    <div class="card-body">
+                        <div class="button-grid">
+                            <button id="btnReadDownloadInfo" class="btn-glow-blue"><i data-lucide="info"></i> Read Info</button>
+                            <button id="btnDownloadReboot" class="btn-glow-blue"><i data-lucide="refresh-cw"></i> Reboot System</button>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Apple & MTP Card -->
+                <section id="section-apple" class="card apple-card">
+                    <div class="card-header">
+                        <h3><i data-lucide="apple"></i> Apple & MTP</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="button-list">
+                            <button id="btnApple" class="btn-outline-apple"><i data-lucide="info"></i> Apple Info</button>
+                            <div class="flex-row">
+                                <button id="btnEnterRecovery" class="btn-outline-apple"><i data-lucide="log-in"></i> Enter Rec</button>
+                                <button id="btnExitRecovery" class="btn-outline-apple"><i data-lucide="log-out"></i> Exit Rec</button>
+                            </div>
+                            <button id="btnMTP" class="btn-outline-mtp"><i data-lucide="radio"></i> MTP Read Info</button>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Reboot & Quick Actions -->
+                <section id="section-actions" class="card actions-card">
+                    <div class="card-header">
+                        <h3><i data-lucide="power"></i> Quick Actions</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="action-grid">
+                            <button id="btnReboot" class="action-btn"><i data-lucide="refresh-cw"></i> Reboot</button>
+                            <button id="btnDownload" class="action-btn"><i data-lucide="download-cloud"></i> Download</button>
+                            <button id="btnRecovery" class="action-btn"><i data-lucide="cpu"></i> Recovery</button>
+                            <button id="btnClear" class="action-btn danger"><i data-lucide="trash-2"></i> Clear Log</button>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Terminal Section (Full Width) -->
+                <section class="card terminal-card full-width">
+                    <div class="card-header">
+                        <h3><i data-lucide="terminal"></i> System Terminal</h3>
+                        <div class="terminal-controls">
+                            <span class="t-dot red"></span>
+                            <span class="t-dot yellow"></span>
+                            <span class="t-dot green"></span>
+                        </div>
+                    </div>
+                    <div id="terminal" class="terminal-body">
+                        <div class="terminal-line welcome">Welcome to Mostafa Unlocker Engine v1.0.3</div>
+                        <div class="terminal-line info">>_ System initialized. Waiting for device...</div>
+                    </div>
+                </section>
+            </div>
+
+            <footer class="dashboard-footer">
+                <p>© 2024 MOSTAFA UNLOCKER | PROFESSIONAL EDITION</p>
+                <div class="footer-links">
+                    <span>Privacy</span>
+                    <span>Terms</span>
+                    <span>Support</span>
                 </div>
-            </div>
-
-            <button id="btnMTP" class="btn-secondary"><i data-lucide="radio"></i> Read Info (MTP/AT)</button>
-
-            <div class="dropdown">
-                <button id="btnAppleMenu" class="btn-secondary">
-                    <i data-lucide="apple"></i> Apple Ops <i data-lucide="chevron-down"></i>
-                </button>
-                <div id="appleDropdown" class="dropdown-content">
-                    <a href="#" id="btnApple"><i data-lucide="info"></i> Read Info (Normal)</a>
-                    <a href="#" id="btnEnterRecovery"><i data-lucide="refresh-cw"></i> Enter Recovery Mode</a>
-                    <a href="#" id="btnExitRecovery"><i data-lucide="log-out"></i> Exit Recovery Mode</a>
-                </div>
-            </div>
-
-            <div class="dropdown">
-                <button id="btnDownloadMenu" class="btn-secondary">
-                    <i data-lucide="download"></i> Download Ops <i data-lucide="chevron-down"></i>
-                </button>
-                <div id="downloadDropdown" class="dropdown-content">
-                    <a href="#" id="btnReadDownloadInfo"><i data-lucide="info"></i> Read Info (Download)</a>
-                    <a href="#" id="btnDownloadReboot"><i data-lucide="refresh-cw"></i> Reboot to System</a>
-                </div>
-            </div>
-
-            <div class="dropdown">
-                <button id="btnRebootMenu" class="btn-outline" disabled>
-                    <i data-lucide="refresh-cw"></i> Reboot Options <i data-lucide="chevron-down"></i>
-                </button>
-                <div id="rebootDropdown" class="dropdown-content">
-                    <a href="#" id="btnReboot"><i data-lucide="power"></i> Standard Reboot</a>
-                    <a href="#" id="btnDownload"><i data-lucide="download-cloud"></i> Download Mode</a>
-                    <a href="#" id="btnFastboot"><i data-lucide="zap"></i> Fastboot Mode</a>
-                    <a href="#" id="btnRecovery"><i data-lucide="cpu"></i> Recovery Mode</a>
-                </div>
-            </div>
-            <button id="btnClear" class="btn-outline"><i data-lucide="trash-2"></i> Clear Log</button>
-        </div>
-        
-        <div id="terminal" class="console-window">
-            <div class="terminal-overlay"></div>
-            <div class="terminal-content">
-                <div class="terminal-header">SYSTEM TERMINAL ACTIVE</div>
-                <div class="color-purple">Welcome to Mostafa Unlocker Engine v1.0.3</div>
-                <div class="color-blue">>_ Waiting for device connection...</div><br>
-            </div>
-        </div>
-
-        <div class="status-bar">
-            <div class="status-indicator">
-                <span class="dot pulse"></span>
-                <span id="statusText">Status: Ready</span>
-            </div>
-            <div class="copyright">© 2024 MOSTAFA UNLOCKER <span class="divider">|</span> PROFESSIONAL EDITION</div>
-        </div>
+            </footer>
+        </main>
     </div>
 
     <!-- App Manager Modal -->
@@ -144,26 +185,22 @@
                         <i data-lucide="search"></i>
                         <input type="text" id="appSearch" placeholder="Filter packages...">
                     </div>
-                    <select id="appFilter">
-                        <option value="all">All Apps</option>
-                        <option value="enabled">Enabled</option>
-                        <option value="disabled">Disabled</option>
-                        <option value="system">System Apps</option>
-                    </select>
-                    <button id="btnInstallApk" class="btn-primary btn-sm"><i data-lucide="plus-circle"></i> Install APK</button>
+                    <button id="btnInstallApk" class="btn-glow-cyan"><i data-lucide="plus-circle"></i> Install APK</button>
                     <input type="file" id="apkInput" accept=".apk" style="display: none;">
                 </div>
-                <!-- شريط تقدم التثبيت -->
+                <!-- Installation Progress -->
                 <div id="installProgressContainer" style="display: none; margin-bottom: 15px;">
                     <div style="display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 5px;">
                         <span>Installing APK...</span>
                         <span id="installPercent">0%</span>
                     </div>
-                    <div class="progress-bg"><div id="installProgressBar" class="progress-fill"></div></div>
+                    <div class="progress-bg">
+                        <div id="installProgressBar" class="progress-fill"></div>
+                    </div>
                 </div>
                 <div class="app-list-container">
                     <table id="appTable">
-                        <thead><tr><th>Package Name</th><th>Status</th><th>Type</th><th>Actions</th></tr></thead>
+                        <thead><tr><th>Package</th><th>Status</th><th>Type</th><th>Actions</th></tr></thead>
                         <tbody id="appTableBody"></tbody>
                     </table>
                 </div>
@@ -172,5 +209,9 @@
     </div>
 
     <script type="module" src="script.js"></script>
+    <script>
+        // Initialize Lucide Icons
+        lucide.createIcons();
+    </script>
 </body>
 </html>
