@@ -4,14 +4,20 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Mostafa Unlocker Dashboard</title>
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net https://esm.sh; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://esm.sh https://cdn.jsdelivr.net;">
     <link rel="stylesheet" href="style.css">
     <!-- Lucide Icons -->
     <script src="https://cdn.jsdelivr.net/npm/lucide@0.344.0/dist/umd/lucide.min.js"></script>
 </head>
 <body>
-    <div class="dashboard-container">
+    <div class="dashboard-container" id="dashboard">
+        <!-- Mobile Menu Toggle -->
+        <button class="menu-toggle" id="menuToggle">
+            <i data-lucide="menu"></i>
+        </button>
+
         <!-- Sidebar -->
-        <aside class="sidebar">
+        <aside class="sidebar" id="sidebar">
             <div class="sidebar-header">
                 <i data-lucide="zap" class="logo-icon"></i>
                 <span class="logo-text">MOSTAFA <small>v1.0.3</small></span>
@@ -46,7 +52,7 @@
             <header class="top-bar">
                 <div class="search-area">
                     <i data-lucide="search"></i>
-                    <input type="text" placeholder="Search operations...">
+                    <input type="text" id="operationSearch" name="operationSearch" placeholder="Search operations...">
                 </div>
                 <div class="user-controls">
                     <button class="icon-btn"><i data-lucide="bell"></i></button>
@@ -72,7 +78,7 @@
                             <button id="btnFRP" class="btn-glow-cyan"><i data-lucide="unlock"></i> Reset FRP</button>
                         </div>
                         <div class="custom-cmd">
-                            <input type="text" id="customAdbCommandInput" placeholder="Custom ADB Command...">
+                            <input type="text" id="customAdbCommandInput" name="customAdbCommand" placeholder="Custom ADB Command...">
                             <button id="btnExecuteCustomAdb"><i data-lucide="send"></i></button>
                         </div>
                     </div>
@@ -92,7 +98,7 @@
                             <button id="btnHonorFRP" class="btn-glow-blue"><i data-lucide="unlock"></i> Honor FRP</button>
                         </div>
                         <div class="custom-cmd">
-                            <input type="text" id="customFastbootCommandInput" placeholder="Custom Fastboot Command...">
+                            <input type="text" id="customFastbootCommandInput" name="customFastbootCommand" placeholder="Custom Fastboot Command...">
                             <button id="btnExecuteCustomFastboot"><i data-lucide="send"></i></button>
                         </div>
                     </div>
@@ -183,10 +189,10 @@
                 <div class="app-controls">
                     <div class="search-box">
                         <i data-lucide="search"></i>
-                        <input type="text" id="appSearch" placeholder="Filter packages...">
+                        <input type="text" id="appSearch" name="appSearch" placeholder="Filter packages...">
                     </div>
                     <button id="btnInstallApk" class="btn-glow-cyan"><i data-lucide="plus-circle"></i> Install APK</button>
-                    <input type="file" id="apkInput" accept=".apk" style="display: none;">
+                    <input type="file" id="apkInput" name="apkInput" accept=".apk" style="display: none;">
                 </div>
                 <!-- Installation Progress -->
                 <div id="installProgressContainer" style="display: none; margin-bottom: 15px;">

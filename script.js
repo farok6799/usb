@@ -163,6 +163,16 @@ if (appSearchInput) appSearchInput.oninput = adb.renderApps;
 const appFilterSelect = document.getElementById('appFilter');
 if (appFilterSelect) appFilterSelect.onchange = adb.renderApps;
 
+    // Mobile Menu Toggle Logic
+    const menuToggle = document.getElementById('menuToggle');
+    const sidebar = document.getElementById('sidebar');
+    if (menuToggle && sidebar) {
+        menuToggle.onclick = (e) => {
+            sidebar.classList.toggle('open');
+            e.stopPropagation();
+        };
+    }
+
 document.getElementById('btnInstallApk').onclick = (e) => {
     e.preventDefault();
     document.getElementById('apkInput').click();
@@ -174,6 +184,11 @@ document.getElementById('apkInput').onchange = (e) => {
 
 window.onclick = (event) => {
     if (event.target.closest('.close-modal')) document.getElementById('appModal').style.display = "none";
+    // إغلاق السايدبار عند الضغط في أي مكان آخر (للموبايل)
+    const sidebar = document.getElementById('sidebar');
+    if (sidebar && !event.target.closest('.sidebar') && sidebar.classList.contains('open')) {
+        sidebar.classList.remove('open');
+    }
 };
 
 if (document.getElementById('btnClear')) {
